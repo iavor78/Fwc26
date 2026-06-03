@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STL WC26">
+<meta name="theme-color" content="#080808">
+<link rel="manifest" href="manifest.json">
+<title>Special Team League WC26</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  body{background:#080808;color:#eee;font-family:Georgia,serif;min-height:100vh;overscroll-behavior:none}
+  input,select,textarea,button{font-family:inherit;outline:none}
+  select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23555' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px!important}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:1}
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-track{background:#0a0a0a}
+  ::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
+  .tab-bar{display:flex;background:#0a0a0a;border-bottom:1px solid #151515;position:sticky;top:0;z-index:10}
+  .tab-btn{flex:1;padding:10px 2px;border:none;background:transparent;cursor:pointer;font-size:11px;font-weight:700;border-bottom:2px solid transparent;color:#444;transition:color .2s,border-color .2s}
+  .tab-btn.active{color:#e63946;border-bottom-color:#e63946}
+  .tab-icon{font-size:15px;margin-bottom:2px}
+  .section-label{font-size:10px;color:#444;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+  .card{background:#0f0f0f;border-radius:10px;padding:14px;border:1px solid #1a1a1a;margin-bottom:8px}
+  .card.done{border-color:#1a3a1a}
+  .pill-btn{padding:5px 12px;border-radius:20px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:#1a1a1a;color:#666;transition:background .2s,color .2s}
+  .pill-btn.active{background:#e63946;color:#fff}
+  .group-btn{width:34px;height:34px;border-radius:8px;border:2px solid #222;cursor:pointer;font-weight:700;font-size:12px;background:#0f0f0f;color:#555;transition:all .2s}
+  .group-btn.active{border-color:#e63946;background:#1a0808;color:#e63946}
+  .group-btn.done{border-color:#222;background:#0d2010;color:#2a9d8f}
+  .score-input{width:42px;text-align:center;background:#1a1a1a;border:1px solid #2a2a2a;color:#fff;padding:6px 0;border-radius:6px;font-size:16px;font-weight:700}
+  .done-btn{padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:#1a1a1a;color:#555;transition:all .2s;flex-shrink:0}
+  .done-btn.active{background:#1a3a1a;color:#2a9d8f}
+  .player-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .save-bar{position:fixed;bottom:0;left:0;right:0;background:#0d0d0d;border-top:1px solid #1a1a1a;padding:10px 14px;z-index:20;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .save-url-box{flex:1;background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:7px 10px;font-size:10px;font-family:monospace;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .copy-btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:11px;flex-shrink:0;transition:all .2s;background:#e63946;color:#fff}
+  .copy-btn.copied{background:#1a3a1a;color:#2a9d8f}
+  .copy-btn:disabled{background:#1a1a1a;color:#333;cursor:default}
+  .content{max-width:560px;margin:0 auto;padding:16px 14px 160px}
+  #loading{display:flex;align-items:center;justify-content:center;min-height:100vh;color:#555;font-size:14px}
+  table{width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:12px}
+  th{padding:7px 4px;text-align:center;color:#555;font-weight:700;letter-spacing:.8px;font-size:10px;border-bottom:2px solid #222}
+  th.left{text-align:left}
+  td{padding:10px 4px;text-align:center;color:#999;border-bottom:1px solid #181818}
+  td.left{text-align:left}
+  .bracket-wrap{overflow-x:auto;padding-bottom:8px}
+  .bracket{display:flex;gap:8px;min-width:max-content}
+  .bracket-col{display:flex;flex-direction:column;gap:4px;min-width:145px}
+  .bracket-col-label{font-size:10px;color:#444;letter-spacing:1px;text-align:center;margin-bottom:4px;font-weight:700;text-transform:uppercase}
+  .bracket-match{background:#111;border-radius:8px;padding:8px 10px;border:1px solid #1a1a1a}
+  .bracket-match-num{font-size:9px;color:#333;margin-bottom:5px;letter-spacing:.8px}
+  .bracket-team{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+  .bracket-score{font-size:12px;font-weight:700;color:#555;min-width:14px;text-align:center;flex-shrink:0}
+  .flex{display:flex}.gap4{gap:4px}.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}
+  .items-center{align-items:center}.justify-between{justify-content:space-between}.flex-1{flex:1}
+  .flex-wrap{flex-wrap:wrap}.mt4{margin-top:4px}.mt6{margin-top:6px}.mt8{margin-top:8px}.mt10{margin-top:10px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}
+  .mb4{margin-bottom:4px}.mb6{margin-bottom:6px}.mb8{margin-bottom:8px}.mb10{margin-bottom:10px}.mb12{margin-bottom:12px}.mb14{margin-bottom:14px}
+  .w100{width:100%}.bold{font-weight:700}.mono{font-family:'Courier New',monospace}
+  .text-red{color:#e63946}.text-teal{color:#2a9d8f}.text-yellow{color:#e9c46a}.text-purple{color:#a78bfa}
+  .fs10{font-size:10px}.fs11{font-size:11px}.fs12{font-size:12px}.fs13{font-size:13px}.fs14{font-size:14px}.fs16{font-size:16px}
+  textarea{background:#111;border:1px solid #222;color:#ccc;padding:8px;border-radius:8px;font-size:10px;font-family:monospace;resize:none;width:100%}
+  .action-btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:700;width:100%;margin-top:6px}
+  .btn-teal{background:#1a2a1a;border:1px solid #2a3a2a;color:#2a9d8f}
+  .btn-purple{background:#1a1a2a;border:1px solid #2a2a3a;color:#a78bfa}
+  .btn-red{background:#1a0808;border:1px solid #3a1010;color:#e63946}
+  .match-num-label{font-size:10px;color:#333;margin-bottom:8px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="loading">Loading…</div>
+<div id="app" style="display:none">
+  <div style="background:linear-gradient(135deg,#0d0d0d,#130505,#0d0d0d);border-bottom:1px solid #151515;padding:16px 16px 12px;padding-top:max(16px,env(safe-area-inset-top))">
+    <div style="max-width:560px;margin:0 auto">
+      <div style="font-size:10px;letter-spacing:3px;color:#e63946;font-family:'Courier New',monospace;margin-bottom:3px;text-transform:uppercase">FIFA World Cup 2026 · USA / CAN / MEX</div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:-.3px">Special Team League WC26</div>
+      <div style="font-size:11px;color:#333;margin-top:2px">4 players · 48 teams · 104 matches</div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="table" onclick="switchTab('table')"><div class="tab-icon">🏆</div>Table</button>
+    <button class="tab-btn" data-tab="bracket" onclick="switchTab('bracket')"><div class="tab-icon">🔗</div>Bracket</button>
+    <button class="tab-btn" data-tab="draw" onclick="switchTab('draw')"><div class="tab-icon">🎲</div>Draw</button>
+    <button class="tab-btn" data-tab="matches" onclick="switchTab('matches')"><div class="tab-icon">⚽</div>Matches</button>
+    <button class="tab-btn" data-tab="players" onclick="switchTab('players')"><div class="tab-icon">👤</div>Players</button>
+  </div>
+  <div class="content" id="content"></div>
+  <div class="save-bar">
+    <div style="max-width:560px;margin:0 auto">
+      <div class="fs10 mb6" style="color:#333;letter-spacing:1px;text-transform:uppercase">📎 Bookmark to save progress</div>
+      <div class="flex gap8 items-center">
+        <div class="save-url-box" id="saveUrlBox">Make a change to generate your save URL…</div>
+        <button class="copy-btn" id="copyBtn" disabled onclick="copyURL()">Copy URL</button>
+      </div>
+      <div class="fs10 mt4" style="color:#252525">Copy → paste in browser → bookmark. Open bookmark to restore.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const GROUPS = {
+  A:["Mexico","South Korea","Czechia","South Africa"],
+  B:["Canada","Switzerland","Qatar","Bosnia & Herzegovina"],
+  C:["Brazil","Morocco","Scotland","Haiti"],
+  D:["USA","Turkey","Australia","Paraguay"],
+  E:["Germany","Ecuador","Ivory Coast","Curaçao"],
+  F:["Netherlands","Japan","Sweden","Tunisia"],
+  G:["Belgium","Iran","Egypt","New Zealand"],
+  H:["Spain","Uruguay","Saudi Arabia","Cape Verde"],
+  I:["France","Senegal","Norway","Iraq"],
+  J:["Argentina","Austria","Algeria","Jordan"],
+  K:["Portugal","Colombia","DR Congo","Uzbekistan"],
+  L:["England","Croatia","Panama","Ghana"],
+};
+const GROUP_KEYS = Object.keys(GROUPS);
+const ALL_TEAMS = Object.values(GROUPS).flat();
+const GROUP_MATCH_NUMS = {
+  A:[1,2,37,38,69,70],B:[3,4,39,40,71,72],C:[5,6,41,42,73,74],
+  D:[7,8,43,44,75,76],E:[9,10,45,46,77,78],F:[11,12,47,48,79,80],
+  G:[13,14,49,50,81,82],H:[15,16,51,52,83,84],I:[17,18,53,54,85,86],
+  J:[19,20,55,56,87,88],K:[21,22,57,58,89,90],L:[23,24,59,60,91,92],
+};
+const MATCHUPS=[[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];
+const PLAYER_COLORS=["#e63946","#2a9d8f","#e9c46a","#a78bfa"];
+const KO_ROUNDS=[
+  {key:"r32",label:"Round of 32",slots:8,matchNums:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
+  {key:"r16",label:"Round of 16",slots:4,matchNums:[89,90,91,92,93,94,95,96]},
+  {key:"qf", label:"Quarter-Finals",slots:2,matchNums:[97,98,99,100]},
+  {key:"sf", label:"Semi-Finals",slots:1,matchNums:[101,102]},
+  {key:"final",label:"Final & 3rd Place",slots:1,matchNums:[103,104]},
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+function initState() {
+  const groupDraw={}, groupMatches={};
+  GROUP_KEYS.forEach(g=>{
+    groupDraw[g]=[null,null,null,null];
+    groupMatches[g]=MATCHUPS.map(([h,a],i)=>({matchNum:GROUP_MATCH_NUMS[g][i],home:h,away:a,homeGoals:"",awayGoals:"",played:false}));
+  });
+  const koDraw={}, koMatches={};
+  KO_ROUNDS.forEach(r=>{
+    koDraw[r.key]=[[],[],[],[]];
+    koMatches[r.key]=r.matchNums.map(n=>({matchNum:n,team1:"",team2:"",goals1:"",goals2:"",played:false}));
+  });
+  return {playerNames:["Player 1","Player 2","Player 3","Player 4"],groupDraw,groupMatches,koDraw,koMatches,activeTab:"table",activeGroup:"A",activeKOPhase:"r32",activeMatchPhase:"group"};
+}
+
+let S = initState();
+
+// ── INDEXEDDB STORAGE ─────────────────────────────────────────────────────────
+const DB_NAME="stl-wc26", DB_STORE="state", DB_KEY="main";
+let db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
+    req.onsuccess=e=>{db=e.target.result;res(db)};
+    req.onerror=()=>rej();
+  });
+}
+function dbSave(state){
+  if(!db) return;
+  const tx=db.transaction(DB_STORE,"readwrite");
+  tx.objectStore(DB_STORE).put(JSON.stringify(state),DB_KEY);
+}
+function dbLoad(){
+  return new Promise(res=>{
+    if(!db){res(null);return;}
+    const tx=db.transaction(DB_STORE,"readonly");
+    const req=tx.objectStore(DB_STORE).get(DB_KEY);
+    req.onsuccess=e=>{
+      try{const p=JSON.parse(e.target.result);res(p&&p.playerNames?p:null);}catch{res(null);}
+    };
+    req.onerror=()=>res(null);
+  });
+}
+
+// ── URL ENCODE/DECODE ─────────────────────────────────────────────────────────
+function encodeState(state){
+  try{return btoa(unescape(encodeURIComponent(JSON.stringify(state))));}catch{return "";}
+}
+function decodeState(b64){
+  try{const p=JSON.parse(decodeURIComponent(escape(atob(b64))));return p&&p.playerNames?p:null;}catch{return null;}
+}
+function buildSaveURL(state){
+  return location.href.split("?")[0]+"?d="+encodeState(state);
+}
+function loadFromURL(){
+  const p=new URLSearchParams(location.search).get("d");
+  return p?decodeState(p):null;
+}
+function mergeState(saved){
+  const fresh=initState();
+  return {...fresh,...saved,
+    groupDraw:saved.groupDraw||fresh.groupDraw,
+    groupMatches:saved.groupMatches||fresh.groupMatches,
+    koDraw:saved.koDraw||fresh.koDraw,
+    koMatches:saved.koMatches||fresh.koMatches,
+    playerNames:(saved.playerNames&&saved.playerNames.length===4)?saved.playerNames:fresh.playerNames,
+  };
+}
+
+// ── SAVE / RENDER ─────────────────────────────────────────────────────────────
+let saveURL="";
+function save(){
+  dbSave(S);
+  saveURL=buildSaveURL(S);
+  const box=document.getElementById("saveUrlBox");
+  const btn=document.getElementById("copyBtn");
+  if(box) box.textContent=saveURL;
+  if(btn){btn.disabled=false;btn.classList.remove("copied");btn.textContent="Copy URL";}
+}
+function update(fn){fn(S);save();render();}
+
+function copyURL(){
+  if(!saveURL) return;
+  const btn=document.getElementById("copyBtn");
+  navigator.clipboard.writeText(saveURL).then(()=>{
+    btn.textContent="✓ Copied!";btn.classList.add("copied");
+    setTimeout(()=>{btn.textContent="Copy URL";btn.classList.remove("copied");},2500);
+  }).catch(()=>{
+    const el=document.createElement("textarea");el.value=saveURL;
+    document.body.appendChild(el);el.select();document.execCommand("copy");
+    document.body.removeChild(el);
+    btn.textContent="✓ Copied!";btn.classList.add("copied");
+    setTimeout(()=>{btn.textContent="Copy URL";btn.classList.remove("copied");},2500);
+  });
+}
+
+// ── POINTS ────────────────────────────────────────────────────────────────────
+function pts(gf,ga){return gf>ga?3:gf===ga?1:0;}
+function computeTable(){
+  const stats=S.playerNames.map(name=>({name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+  GROUP_KEYS.forEach(g=>{
+    S.groupMatches[g].forEach(m=>{
+      if(!m.played) return;
+      const hg=parseInt(m.homeGoals),ag=parseInt(m.awayGoals);
+      if(isNaN(hg)||isNaN(ag)) return;
+      const ho=S.groupDraw[g][m.home],ao=S.groupDraw[g][m.away];
+      [[ho,hg,ag],[ao,ag,hg]].forEach(([pi,gf,ga])=>{
+        if(pi===null||pi===undefined||pi<0) return;
+        const s=stats[pi];
+        s.played++;s.gf+=gf;s.ga+=ga;s.gd+=gf-ga;s.pts+=pts(gf,ga);
+        if(gf>ga)s.won++;else if(gf===ga)s.drawn++;else s.lost++;
+      });
+    });
+  });
+  KO_ROUNDS.forEach(({key})=>{
+    S.koMatches[key].forEach(m=>{
+      if(!m.played) return;
+      const g1=parseInt(m.goals1),g2=parseInt(m.goals2);
+      if(isNaN(g1)||isNaN(g2)) return;
+      [0,1,2,3].forEach(pi=>{
+        const draw=S.koDraw[key][pi]||[];
+        const h1=m.team1&&draw.includes(m.team1),h2=m.team2&&draw.includes(m.team2);
+        if(h1){const s=stats[pi];s.played++;s.gf+=g1;s.ga+=g2;s.gd+=g1-g2;s.pts+=pts(g1,g2);if(g1>g2)s.won++;else if(g1===g2)s.drawn++;else s.lost++;}
+        if(h2){const s=stats[pi];s.played++;s.gf+=g2;s.ga+=g1;s.gd+=g2-g1;s.pts+=pts(g2,g1);if(g2>g1)s.won++;else if(g2===g1)s.drawn++;else s.lost++;}
+      });
+    });
+  });
+  return stats.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+}
+
+// ── TAB SWITCH ────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  S.activeTab=tab;
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  const el=document.getElementById("content");
+  switch(S.activeTab){
+    case "table":   el.innerHTML=renderTable();break;
+    case "bracket": el.innerHTML=renderBracket();break;
+    case "draw":    el.innerHTML=renderDraw();break;
+    case "matches": el.innerHTML=renderMatches();break;
+    case "players": el.innerHTML=renderPlayers();break;
+  }
+  attachHandlers();
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────────
+function renderTable(){
+  const rows=computeTable();
+  const medals=["🥇","🥈","🥉",""];
+  const cols=["#","Player","P","W","D","L","GF","GA","GD","Pts"];
+  let h=`<table><thead><tr>`;
+  cols.forEach((c,i)=>h+=`<th class="${i===1?'left':''}">${c}</th>`);
+  h+=`</tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    const pi=S.playerNames.indexOf(r.name);
+    const col=PLAYER_COLORS[pi]||"#fff";
+    h+=`<tr style="${i===0?'background:rgba(255,215,0,0.05)':''}">
+      <td>${medals[i]}</td>
+      <td class="left"><span style="display:inline-flex;align-items:center;gap:7px">
+        <span class="player-dot" style="background:${col};box-shadow:0 0 6px ${col}88"></span>
+        <span style="color:${col};font-weight:700">${esc(r.name)}</span>
+      </span></td>
+      <td>${r.played}</td><td>${r.won}</td><td>${r.drawn}</td><td>${r.lost}</td>
+      <td>${r.gf}</td><td>${r.ga}</td><td>${r.gd>0?"+":""}${r.gd}</td>
+      <td style="font-weight:700;color:${col};font-size:15px">${r.pts}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table><div style="margin-top:20px;font-size:10px;color:#2a2a2a;text-align:center;letter-spacing:1px">W=3 · D=1 · L=0 · Tiebreaker: GD → GF</div>`;
+  return h;
+}
+
+// ── BRACKET ───────────────────────────────────────────────────────────────────
+function getOwnerColor(team){
+  if(!team) return "#333";
+  for(const r of KO_ROUNDS)
+    for(let pi=0;pi<4;pi++)
+      if((S.koDraw[r.key][pi]||[]).includes(team)) return PLAYER_COLORS[pi];
+  return "#888";
+}
+function renderBracket(){
+  const rounds=[...KO_ROUNDS.map(r=>({label:r.key==="r32"?"R32":r.key==="r16"?"R16":r.key==="qf"?"QF":r.key==="sf"?"SF":"🏆",matches:S.koMatches[r.key]}))];
+  let h=`<div class="section-label">KO Bracket — Official Match Numbers</div><div class="bracket-wrap"><div class="bracket">`;
+  rounds.forEach(({label,matches})=>{
+    h+=`<div class="bracket-col"><div class="bracket-col-label">${label}</div>`;
+    matches.forEach(m=>{
+      const c1=getOwnerColor(m.team1),c2=getOwnerColor(m.team2);
+      const winner=m.played&&m.goals1!==""&&m.goals2!==""?(parseInt(m.goals1)>parseInt(m.goals2)?m.team1:parseInt(m.goals2)>parseInt(m.goals1)?m.team2:"D"):null;
+      const d1=winner&&winner!==m.team1?"opacity:.35":"";
+      const d2=winner&&winner!==m.team2?"opacity:.35":"";
+      h+=`<div class="bracket-match">
+        <div class="bracket-match-num">M${m.matchNum}</div>
+        <div class="flex gap4 items-center mb4">
+          <span class="bracket-team flex-1" style="color:${c1};${d1}">${esc(m.team1||"TBD")}</span>
+          <span class="bracket-score">${m.played?m.goals1:""}</span>
+        </div>
+        <div class="flex gap4 items-center">
+          <span class="bracket-team flex-1" style="color:${c2};${d2}">${esc(m.team2||"TBD")}</span>
+          <span class="bracket-score">${m.played?m.goals2:""}</span>
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`</div></div><div class="flex flex-wrap gap12 mt16">`;
+  S.playerNames.forEach((n,i)=>h+=`<div class="flex items-center gap6 fs11"><span class="player-dot" style="background:${PLAYER_COLORS[i]}"></span><span style="color:${PLAYER_COLORS[i]}">${esc(n)}</span></div>`);
+  h+=`</div>`;
+  return h;
+}
+
+// ── DRAW ──────────────────────────────────────────────────────────────────────
+function renderDraw(){
+  const phases=[{key:"group",label:"Groups"},...KO_ROUNDS.map(r=>({key:r.key,label:r.label.replace("Round of ","R").replace("-Finals","F").replace(" & 3rd Place","")}))];
+  let h=`<div class="flex gap6 flex-wrap mb14">`;
+  phases.forEach(p=>h+=`<button class="pill-btn ${S.activeKOPhase===p.key||(!S.activeKOPhase&&p.key==='group')?'active':''}" onclick="update(s=>{s.activeKOPhase='${p.key}'})">${p.label}</button>`);
+  const phase=S.activeKOPhase||"group";
+  h+=`</div>`;
+  if(phase==="group") h+=renderGroupDraw();
+  else h+=renderKODraw(phase);
+  return h;
+}
+
+function renderGroupDraw(){
+  const g=S.activeGroup||"A";
+  const teams=GROUPS[g];
+  let h=`<div class="flex gap6 flex-wrap mb14">`;
+  GROUP_KEYS.forEach(k=>{
+    const filled=S.groupDraw[k].filter(v=>v!==null&&v!==undefined).length;
+    h+=`<button class="group-btn ${k===g?'active':''} ${filled===4?'done':''}" onclick="update(s=>{s.activeGroup='${k}';s.activeKOPhase='group'})">${k}</button>`;
+  });
+  h+=`</div><div class="card">`;
+  h+=`<div class="section-label">Group ${g} — assign 1 team per player</div>`;
+  h+=`<div class="flex flex-wrap gap6 mb12">`;
+  teams.forEach((t,i)=>h+=`<div style="background:#161616;border-radius:8px;padding:5px 10px;font-size:11px;color:#555"><span style="color:#2a2a2a;margin-right:4px;font-size:10px">#${i+1}</span>${esc(t)}</div>`);
+  h+=`</div>`;
+  S.playerNames.forEach((pname,pi)=>{
+    const cur=S.groupDraw[g][pi];
+    h+=`<div class="flex items-center gap8 mb8">
+      <span class="player-dot" style="background:${PLAYER_COLORS[pi]}"></span>
+      <span style="width:72px;font-size:12px;font-weight:700;color:${PLAYER_COLORS[pi]};flex-shrink:0">${esc(pname)}</span>
+      <select class="flex-1" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:7px 28px 7px 8px;border-radius:8px;font-size:12px"
+        onchange="update(s=>{s.groupDraw['${g}'][${pi}]=this.value===''?null:parseInt(this.value)})">
+        <option value="">— pick team —</option>`;
+    teams.forEach((t,idx)=>{
+      const takenBy=S.groupDraw[g].findIndex((v,i2)=>v===idx&&i2!==pi);
+      if(takenBy>=0&&idx!==cur) return;
+      h+=`<option value="${idx}" ${cur===idx?"selected":""}>${esc(t)}</option>`;
+    });
+    h+=`</select></div>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+
+function renderKODraw(phase){
+  const round=KO_ROUNDS.find(r=>r.key===phase);
+  const n=round.slots;
+  let h=`<div class="section-label">${round.label} — ${n} team${n>1?"s":""} per player</div>`;
+  S.playerNames.forEach((pname,pi)=>{
+    const current=S.koDraw[phase][pi]||[];
+    h+=`<div class="card"><div class="flex items-center gap8 mb10">
+      <span class="player-dot" style="background:${PLAYER_COLORS[pi]}"></span>
+      <span style="font-weight:700;color:${PLAYER_COLORS[pi]};font-size:13px">${esc(pname)}</span>
+      <span style="font-size:10px;color:#333;margin-left:auto">${current.filter(Boolean).length}/${n}</span>
+    </div>`;
+    for(let slot=0;slot<n;slot++){
+      const cv=current[slot]||"";
+      h+=`<select style="width:100%;background:#1a1a1a;border:1px solid #222;color:#eee;padding:7px 28px 7px 8px;border-radius:8px;font-size:12px;margin-bottom:5px"
+        onchange="update(s=>{if(!s.koDraw['${phase}'][${pi}])s.koDraw['${phase}'][${pi}]=[];s.koDraw['${phase}'][${pi}][${slot}]=this.value||undefined})">
+        <option value="">— Team ${slot+1} —</option>`;
+      ALL_TEAMS.forEach(t=>{
+        const taken=current.some((x,i)=>x===t&&i!==slot);
+        if(taken) return;
+        h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)}</option>`;
+      });
+      h+=`</select>`;
+    }
+    h+=`</div>`;
+  });
+  return h;
+}
+
+// ── MATCHES ───────────────────────────────────────────────────────────────────
+function renderMatches(){
+  const phase=S.activeMatchPhase||"group";
+  const phases=[{key:"group",label:"Groups"},...KO_ROUNDS.map(r=>({key:r.key,label:r.label.replace("Round of ","R").replace("-Finals","F").replace(" & 3rd Place","")}))];
+  let h=`<div class="flex gap6 flex-wrap mb14">`;
+  phases.forEach(p=>h+=`<button class="pill-btn ${phase===p.key?'active':''}" onclick="update(s=>{s.activeMatchPhase='${p.key}'})">${p.label}</button>`);
+  h+=`</div>`;
+  if(phase==="group") h+=renderGroupMatches();
+  else h+=renderKOMatches(phase);
+  return h;
+}
+
+function renderGroupMatches(){
+  const g=S.activeGroup||"A";
+  const teams=GROUPS[g];
+  let h=`<div class="flex gap6 flex-wrap mb14">`;
+  GROUP_KEYS.forEach(k=>{
+    const done=S.groupMatches[k].filter(m=>m.played).length;
+    h+=`<button class="group-btn ${k===g?'active':''} ${done===6?'done':''}" onclick="update(s=>{s.activeGroup='${k}';s.activeMatchPhase='group'})">${k}</button>`;
+  });
+  h+=`</div>`;
+  S.groupMatches[g].forEach((m,idx)=>{
+    const hTeam=teams[m.home],aTeam=teams[m.away];
+    const ho=S.groupDraw[g][m.home],ao=S.groupDraw[g][m.away];
+    const hCol=ho!==null&&ho!==undefined?PLAYER_COLORS[ho]:"#444";
+    const aCol=ao!==null&&ao!==undefined?PLAYER_COLORS[ao]:"#444";
+    h+=`<div class="card ${m.played?'done':''}">
+      <div class="match-num-label">MATCH ${m.matchNum} · Group ${g}</div>
+      <div class="flex items-center gap6">
+        <div class="flex-1">
+          <div style="font-size:10px;color:${hCol};font-weight:700;margin-bottom:2px">${ho!==null&&ho!==undefined?esc(S.playerNames[ho]):"—"}</div>
+          <div style="font-size:13px;color:#ddd;font-weight:600">${esc(hTeam)}</div>
+        </div>
+        <div class="flex items-center gap6" style="flex-shrink:0">
+          <input type="number" min="0" max="20" class="score-input" value="${m.homeGoals}"
+            oninput="update(s=>{s.groupMatches['${g}'][${idx}].homeGoals=this.value})">
+          <span style="color:#333;font-weight:700">–</span>
+          <input type="number" min="0" max="20" class="score-input" value="${m.awayGoals}"
+            oninput="update(s=>{s.groupMatches['${g}'][${idx}].awayGoals=this.value})">
+        </div>
+        <div class="flex-1" style="text-align:right">
+          <div style="font-size:10px;color:${aCol};font-weight:700;margin-bottom:2px">${ao!==null&&ao!==undefined?esc(S.playerNames[ao]):"—"}</div>
+          <div style="font-size:13px;color:#ddd;font-weight:600">${esc(aTeam)}</div>
+        </div>
+        <button class="done-btn ${m.played?'active':''}"
+          onclick="update(s=>{const m=s.groupMatches['${g}'][${idx}];if(m.homeGoals!==''&&m.awayGoals!=='')m.played=!m.played})">
+          ${m.played?"✓":"Done"}
+        </button>
+      </div>
+    </div>`;
+  });
+  return h;
+}
+
+function renderKOMatches(phase){
+  const round=KO_ROUNDS.find(r=>r.key===phase);
+  let h=`<div class="section-label">${round.label}</div>`;
+  S.koMatches[phase].forEach((m,idx)=>{
+    const o1=S.playerNames.findIndex((_,pi)=>(S.koDraw[phase][pi]||[]).includes(m.team1)&&m.team1);
+    const o2=S.playerNames.findIndex((_,pi)=>(S.koDraw[phase][pi]||[]).includes(m.team2)&&m.team2);
+    h+=`<div class="card ${m.played?'done':''}">
+      <div class="match-num-label">MATCH ${m.matchNum}</div>
+      <div class="flex gap6 mb8 items-center">
+        <div class="flex-1">
+          <select style="width:100%;background:#1a1a1a;border:1px solid #222;color:#eee;padding:7px 28px 7px 8px;border-radius:8px;font-size:12px"
+            onchange="update(s=>{s.koMatches['${phase}'][${idx}].team1=this.value})">
+            <option value="">Team 1</option>`;
+    ALL_TEAMS.forEach(t=>h+=`<option value="${esc(t)}" ${m.team1===t?"selected":""}>${esc(t)}</option>`);
+    h+=`</select>${o1>=0?`<div style="font-size:10px;color:${PLAYER_COLORS[o1]};margin-top:3px">${esc(S.playerNames[o1])}</div>`:""}
+        </div>
+        <div class="flex items-center gap6" style="flex-shrink:0">
+          <input type="number" min="0" class="score-input" value="${m.goals1}"
+            oninput="update(s=>{s.koMatches['${phase}'][${idx}].goals1=this.value})">
+          <span style="color:#333">–</span>
+          <input type="number" min="0" class="score-input" value="${m.goals2}"
+            oninput="update(s=>{s.koMatches['${phase}'][${idx}].goals2=this.value})">
+        </div>
+        <div class="flex-1" style="text-align:right">
+          <select style="width:100%;background:#1a1a1a;border:1px solid #222;color:#eee;padding:7px 28px 7px 8px;border-radius:8px;font-size:12px"
+            onchange="update(s=>{s.koMatches['${phase}'][${idx}].team2=this.value})">
+            <option value="">Team 2</option>`;
+    ALL_TEAMS.forEach(t=>h+=`<option value="${esc(t)}" ${m.team2===t?"selected":""}>${esc(t)}</option>`);
+    h+=`</select>${o2>=0?`<div style="font-size:10px;color:${PLAYER_COLORS[o2]};margin-top:3px;text-align:right">${esc(S.playerNames[o2])}</div>`:""}
+        </div>
+      </div>
+      <button class="done-btn ${m.played?'active':''}"
+        onclick="update(s=>{const m=s.koMatches['${phase}'][${idx}];if(m.goals1!==''&&m.goals2!=='')m.played=!m.played})">
+        ${m.played?"✓ Done":"Mark Done"}
+      </button>
+    </div>`;
+  });
+  return h;
+}
+
+// ── PLAYERS ───────────────────────────────────────────────────────────────────
+function renderPlayers(){
+  let h=`<div class="section-label">Edit Player Names</div>`;
+  S.playerNames.forEach((name,i)=>{
+    h+=`<div class="card flex items-center gap10">
+      <span class="player-dot" style="background:${PLAYER_COLORS[i]};box-shadow:0 0 8px ${PLAYER_COLORS[i]}66;width:12px;height:12px"></span>
+      <input type="text" value="${esc(name)}" maxlength="20"
+        style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:${PLAYER_COLORS[i]};padding:8px 10px;border-radius:8px;font-size:14px;font-weight:700"
+        oninput="update(s=>{s.playerNames[${i}]=this.value||'Player ${i+1}'})">
+    </div>`;
+  });
+  h+=`<div class="card mt16">
+    <div class="section-label">↩ Restore from save URL</div>
+    <div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.5">Paste your full saved URL here if you need to restore manually.</div>
+    <textarea id="importBox" rows="3" placeholder="Paste full URL or just the ?d=… part…"></textarea>
+    <button class="action-btn btn-purple" onclick="doImport()">Restore Data</button>
+    <div id="importMsg" style="font-size:12px;margin-top:6px"></div>
+  </div>
+  <div class="card mt10">
+    <div class="section-label">⚠ Reset All Data</div>
+    <button class="action-btn btn-red" onclick="doReset()">Reset All Match Data</button>
+  </div>`;
+  return h;
+}
+
+function doImport(){
+  let text=(document.getElementById("importBox")||{}).value||"";
+  text=text.trim();
+  if(text.includes("?d=")) text=text.split("?d=")[1].split("&")[0];
+  const parsed=decodeState(text);
+  const msg=document.getElementById("importMsg");
+  if(!parsed){if(msg)msg.style.color="#e63946",msg.textContent="Invalid code.";return;}
+  S=mergeState(parsed);save();render();
+  if(msg)msg.style.color="#2a9d8f",msg.textContent="✓ Data restored!";
+}
+
+function doReset(){
+  if(!confirm("Reset all match data? Player names will be kept. This cannot be undone.")) return;
+  const names=[...S.playerNames];
+  S=initState();S.playerNames=names;save();render();
+}
+
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function attachHandlers(){}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init(){
+  await openDB();
+  // URL takes priority
+  const fromURL=loadFromURL();
+  if(fromURL){S=mergeState(fromURL);}
+  else {
+    const fromDB=await dbLoad();
+    if(fromDB) S=mergeState(fromDB);
+  }
+  document.getElementById("loading").style.display="none";
+  document.getElementById("app").style.display="block";
+  // Set active tab button
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===S.activeTab));
+  save();render();
+}
+init();
+</script>
+
+<script>
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
