@@ -455,10 +455,12 @@ function renderGroupMatches(){
         </div>
         <div class="flex items-center gap6" style="flex-shrink:0">
           <input type="number" min="0" max="20" class="score-input" value="${m.homeGoals}"
-            oninput="update(s=>{s.groupMatches['${g}'][${idx}].homeGoals=this.value})">
+            onchange="update(s=>{s.groupMatches['${g}'][${idx}].homeGoals=this.value})"
+            onblur="update(s=>{s.groupMatches['${g}'][${idx}].homeGoals=this.value})">
           <span style="color:#333;font-weight:700">–</span>
           <input type="number" min="0" max="20" class="score-input" value="${m.awayGoals}"
-            oninput="update(s=>{s.groupMatches['${g}'][${idx}].awayGoals=this.value})">
+            onchange="update(s=>{s.groupMatches['${g}'][${idx}].awayGoals=this.value})"
+            onblur="update(s=>{s.groupMatches['${g}'][${idx}].awayGoals=this.value})">
         </div>
         <div class="flex-1" style="text-align:right">
           <div style="font-size:10px;color:${aCol};font-weight:700;margin-bottom:2px">${ao!==null&&ao!==undefined?esc(S.playerNames[ao]):"—"}</div>
@@ -492,10 +494,12 @@ function renderKOMatches(phase){
         </div>
         <div class="flex items-center gap6" style="flex-shrink:0">
           <input type="number" min="0" class="score-input" value="${m.goals1}"
-            oninput="update(s=>{s.koMatches['${phase}'][${idx}].goals1=this.value})">
+            onchange="update(s=>{s.koMatches['${phase}'][${idx}].goals1=this.value})"
+            onblur="update(s=>{s.koMatches['${phase}'][${idx}].goals1=this.value})">
           <span style="color:#333">–</span>
           <input type="number" min="0" class="score-input" value="${m.goals2}"
-            oninput="update(s=>{s.koMatches['${phase}'][${idx}].goals2=this.value})">
+            onchange="update(s=>{s.koMatches['${phase}'][${idx}].goals2=this.value})"
+            onblur="update(s=>{s.koMatches['${phase}'][${idx}].goals2=this.value})">
         </div>
         <div class="flex-1" style="text-align:right">
           <select style="width:100%;background:#1a1a1a;border:1px solid #222;color:#eee;padding:7px 28px 7px 8px;border-radius:8px;font-size:12px"
@@ -520,9 +524,10 @@ function renderPlayers(){
   S.playerNames.forEach((name,i)=>{
     h+=`<div class="card flex items-center gap10">
       <span class="player-dot" style="background:${PLAYER_COLORS[i]};box-shadow:0 0 8px ${PLAYER_COLORS[i]}66;width:12px;height:12px"></span>
-      <input type="text" value="${esc(name)}" maxlength="20"
+      <input type="text" value="${esc(name)}" maxlength="20" id="pname${i}"
         style="flex:1;background:#1a1a1a;border:1px solid #2a2a2a;color:${PLAYER_COLORS[i]};padding:8px 10px;border-radius:8px;font-size:14px;font-weight:700"
-        oninput="update(s=>{s.playerNames[${i}]=this.value||'Player ${i+1}'})">
+        onblur="update(s=>{s.playerNames[${i}]=this.value.trim()||'Player ${i+1}'})"
+        onkeydown="if(event.key==='Enter'){this.blur()}">
     </div>`;
   });
   h+=`<div class="card mt16">
