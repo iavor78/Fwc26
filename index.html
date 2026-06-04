@@ -22,7 +22,7 @@
   ::-webkit-scrollbar{width:4px;height:4px}
   ::-webkit-scrollbar-track{background:#0a0a0a}
   ::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
-  .tab-bar{display:flex;background:rgba(10,10,10,0.96);border-bottom:1px solid #151515;position:sticky;top:0;z-index:10;backdrop-filter:blur(4px)}
+  .tab-bar{display:flex;background:rgba(10,10,10,0.60);border-bottom:1px solid #151515;position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
   .tab-btn{flex:1;padding:10px 2px;border:none;background:transparent;cursor:pointer;font-size:11px;font-weight:700;border-bottom:2px solid transparent;color:#444;transition:color .2s,border-color .2s}
   .tab-btn.active{color:#e63946;border-bottom-color:#e63946}
   .tab-icon{font-size:15px;margin-bottom:2px}
@@ -38,7 +38,7 @@
   .done-btn{padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:#1a1a1a;color:#555;transition:all .2s;flex-shrink:0}
   .done-btn.active{background:#1a3a1a;color:#2a9d8f}
   .player-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
-  .save-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,0.96);border-top:1px solid #1a1a1a;padding:10px 14px;z-index:20;padding-bottom:max(10px,env(safe-area-inset-bottom));backdrop-filter:blur(4px)}
+  .save-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,0.55);border-top:1px solid #1a1a1a;padding:10px 14px;z-index:20;padding-bottom:max(10px,env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
   .save-url-box{flex:1;background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:7px 10px;font-size:10px;font-family:monospace;color:#666;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;cursor:text;user-select:all;-webkit-user-select:all}
   .copy-btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:11px;flex-shrink:0;transition:all .2s;background:#e63946;color:#fff}
   .copy-btn.copied{background:#1a3a1a;color:#2a9d8f}
@@ -151,21 +151,64 @@ const GROUP_MATCH_NUMS = {
 const MATCHUPS=[[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];
 
 // ── TEAM FLAG EMOJIS ─────────────────────────────────────────────────────────
-const FLAG = {
-  "Mexico":"🇲🇽","South Korea":"🇰🇷","Czechia":"🇨🇿","South Africa":"🇿🇦",
-  "Canada":"🇨🇦","Switzerland":"🇨🇭","Qatar":"🇶🇦","Bosnia & Herzegovina":"🇧🇦",
-  "Brazil":"🇧🇷","Morocco":"🇲🇦","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Haiti":"🇭🇹",
-  "USA":"🇺🇸","Turkey":"🇹🇷","Australia":"🇦🇺","Paraguay":"🇵🇾",
-  "Germany":"🇩🇪","Ecuador":"🇪🇨","Ivory Coast":"🇨🇮","Curaçao":"🇨🇼",
-  "Netherlands":"🇳🇱","Japan":"🇯🇵","Sweden":"🇸🇪","Tunisia":"🇹🇳",
-  "Belgium":"🇧🇪","Iran":"🇮🇷","Egypt":"🇪🇬","New Zealand":"🇳🇿",
-  "Spain":"🇪🇸","Uruguay":"🇺🇾","Saudi Arabia":"🇸🇦","Cape Verde":"🇨🇻",
-  "France":"🇫🇷","Senegal":"🇸🇳","Norway":"🇳🇴","Iraq":"🇮🇶",
-  "Argentina":"🇦🇷","Austria":"🇦🇹","Algeria":"🇩🇿","Jordan":"🇯🇴",
-  "Portugal":"🇵🇹","Colombia":"🇨🇴","DR Congo":"🇨🇩","Uzbekistan":"🇺🇿",
-  "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croatia":"🇭🇷","Panama":"🇵🇦","Ghana":"🇬🇭",
+const FLAG_CODES = {
+  "Mexico":"mx",
+  "South Korea":"kr",
+  "Czechia":"cz",
+  "South Africa":"za",
+  "Canada":"ca",
+  "Switzerland":"ch",
+  "Qatar":"qa",
+  "Bosnia & Herzegovina":"ba",
+  "Brazil":"br",
+  "Morocco":"ma",
+  "Scotland":"gb-sct",
+  "Haiti":"ht",
+  "USA":"us",
+  "Turkey":"tr",
+  "Australia":"au",
+  "Paraguay":"py",
+  "Germany":"de",
+  "Ecuador":"ec",
+  "Ivory Coast":"ci",
+  "Curaçao":"cw",
+  "Netherlands":"nl",
+  "Japan":"jp",
+  "Sweden":"se",
+  "Tunisia":"tn",
+  "Belgium":"be",
+  "Iran":"ir",
+  "Egypt":"eg",
+  "New Zealand":"nz",
+  "Spain":"es",
+  "Uruguay":"uy",
+  "Saudi Arabia":"sa",
+  "Cape Verde":"cv",
+  "France":"fr",
+  "Senegal":"sn",
+  "Norway":"no",
+  "Iraq":"iq",
+  "Argentina":"ar",
+  "Austria":"at",
+  "Algeria":"dz",
+  "Jordan":"jo",
+  "Portugal":"pt",
+  "Colombia":"co",
+  "DR Congo":"cd",
+  "Uzbekistan":"uz",
+  "England":"gb-eng",
+  "Croatia":"hr",
+  "Panama":"pa",
+  "Ghana":"gh",
 };
-function flag(team){ return FLAG[team]||"🏳"; }
+function flag(team){
+  const code=FLAG_CODES[team];
+  if(!code) return "";
+  return `<img src="https://flagcdn.com/16x12/${code}.png" width="16" height="12" style="vertical-align:middle;margin-right:3px;border-radius:1px" alt="${team}">`;
+}
+function flagEmoji(team){
+  return FLAG[team]||"";
+}
 // ── FIFA RANKINGS (April 1, 2026 official) ───────────────────────────────────
 const FIFA_RANK = {
   "France":1,"Spain":2,"Argentina":3,"England":4,"Portugal":5,
@@ -753,11 +796,13 @@ function getOwnerIndex(team){
   for(const r of KO_ROUNDS)
     for(let pi=0;pi<4;pi++)
       if((S.koDraw[r.key][pi]||[]).includes(team)) return pi;
-  // Check group draw (groupDraw[g][teamSlot] = playerIndex)
+  // Check group draw: groupDraw[g][pi] = teamSlotIndex (player -> their team slot)
   for(const g of GROUP_KEYS){
     const teamSlot = GROUPS[g].indexOf(team);
-    if(teamSlot>=0 && S.groupDraw[g][teamSlot]!==null && S.groupDraw[g][teamSlot]!==undefined)
-      return S.groupDraw[g][teamSlot];
+    if(teamSlot<0) continue;
+    for(let pi=0;pi<4;pi++){
+      if(S.groupDraw[g][pi]===teamSlot) return pi;
+    }
   }
   return -1;
 }
@@ -920,7 +965,7 @@ function renderGroupDraw(){
     teams.forEach((t,idx)=>{
       const takenBy=S.groupDraw[g].findIndex((v,i2)=>v===idx&&i2!==pi);
       if(takenBy>=0&&idx!==curSlot) return;
-      h+=`<option value="${idx}" ${curSlot===idx?"selected":""}>${flag(t)} ${esc(t)} · FIFA #${rank(t)}</option>`;
+      h+=`<option value="${idx}" ${curSlot===idx?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
     });
     h+=`</select></div>`;
   });
@@ -974,7 +1019,7 @@ function renderKODraw(phase){
           });
           h+=`<optgroup label="Group ${grp}">`;
           byGroup[grp].forEach((t,i)=>{
-            h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${flag(t)} ${esc(t)} · FIFA #${rank(t)}</option>`;
+            h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
           });
           h+=`</optgroup>`;
         });
@@ -1154,9 +1199,9 @@ function simAssignTeams(){
   update(s=>{
     // Group draw: randomly assign 1 team per player per group
     GROUP_KEYS.forEach(g=>{
-      const slots=[0,1,2,3];
-      const players=[0,1,2,3].sort(()=>Math.random()-0.5);
-      slots.forEach((slot,i)=>{ s.groupDraw[g][slot]=players[i]; });
+      const shuffledSlots=[0,1,2,3].sort(()=>Math.random()-0.5);
+      // groupDraw[g][pi] = teamSlot
+      [0,1,2,3].forEach((pi,i)=>{ s.groupDraw[g][pi]=shuffledSlots[i]; });
     });
 
     // KO draws: assign teams that will be auto-populated later
