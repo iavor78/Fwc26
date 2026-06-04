@@ -656,17 +656,51 @@ function getMatchLoser(matchNum) {
 
 function autoPopulateKO(state) {
   // We operate on state directly (called inside update())
-  const best3rd = getBest3rdPlaced();
-  let t3Index = 0; // cycling index into best 8 third-placed teams
+  const best3rd = getBest3rdPlaced(); // [] until all 12 groups complete
 
   // ── R32 ──
+  // Assign T3 slots in order, but track which T3 teams are already placed
+  // to avoid duplicates across multiple calls
+  let t3Assigned = [];
   R32_PATHS.forEach(([mNum, src1, src2]) => {
     const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
-    if(!m || m.played) return; // don't overwrite played matches
-    const t1 = src1==="T3" ? (best3rd[t3Index++]||"") : getGroupFinisher(src1);
-    const t2 = src2==="T3" ? (best3rd[t3Index++]||"") : getGroupFinisher(src2);
-    if(t1) m.team1 = t1;
-    if(t2) m.team2 = t2;
+    if(!m || m.played) return;
+    if(src1 !== "T3"){
+      const t = getGroupFinisher(src1);
+      if(t) m.team1 = t;
+    }
+    if(src2 !== "T3"){
+      const t = getGroupFinisher(src2);
+      if(t) m.team2 = t;
+    }
+  });
+
+  // Now assign T3 slots — only if we have all 8
+  if(best3rd.length === 8){
+    let t3i = 0;
+    R32_PATHS.forEach(([mNum, src1, src2]) => {
+      const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
+      if(!m || m.played) return;
+      if(src1 === "T3"){ m.team1 = best3rd[t3i++]||""; }
+      if(src2 === "T3"){ m.team2 = best3rd[t3i++]||""; }
+    });
+  } else {
+    // Clear T3 slots so stale values don't persist
+    R32_PATHS.forEach(([mNum, src1, src2]) => {
+      const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
+      if(!m || m.played) return;
+      if(src1 === "T3" && !m.team1) m.team1 = "";
+      if(src2 === "T3" && !m.team2) m.team2 = "";
+    });
+  }
+
+  // Deduplicate: if any team appears more than once in R32, clear duplicates
+  const seen = new Set();
+  state.koMatches.r32.forEach(m => {
+    if(!m.played){
+      if(m.team1){ if(seen.has(m.team1)) m.team1=""; else seen.add(m.team1); }
+      if(m.team2){ if(seen.has(m.team2)) m.team2=""; else seen.add(m.team2); }
+    }
   });
 
   // ── R16 ──
