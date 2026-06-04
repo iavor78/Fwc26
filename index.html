@@ -42,7 +42,7 @@
   .copy-btn.copied{background:#1a3a1a;color:#2a9d8f}
   .copy-btn:disabled{background:#1a1a1a;color:#333;cursor:default}
   .content{max-width:100%;margin:0 auto;padding:16px 14px 160px}
-  #loading{display:flex;align-items:center;justify-content:center;min-height:100vh;color:#555;font-size:14px}
+  #loading{display:flex;align-items:center;justify-content:center;min-height:100vh;color:#555;font-size:14px}#loading.hidden{display:none!important}
   table{width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:12px}
   th{padding:7px 4px;text-align:center;color:#555;font-weight:700;letter-spacing:.8px;font-size:10px;border-bottom:2px solid #222}
   th.left{text-align:left}
@@ -73,7 +73,7 @@
 </style>
 </head>
 <body>
-<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px"><div style="color:#555;font-size:14px;font-family:Georgia,serif" id="loadingMsg">Connecting to cloud…</div><div style="width:32px;height:32px;border:2px solid #1a1a1a;border-top-color:#e63946;border-radius:50%;animation:spin 0.8s linear infinite"></div></div>
+<div id="loading" style="flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px"><div style="color:#555;font-size:14px;font-family:Georgia,serif" id="loadingMsg">Connecting to cloud…</div><div style="width:32px;height:32px;border:2px solid #1a1a1a;border-top-color:#e63946;border-radius:50%;animation:spin 0.8s linear infinite"></div></div>
 <div id="app" style="display:none">
   <div style="position:relative;overflow:hidden;border-bottom:1px solid #1a0a0a;padding-top:max(0px,env(safe-area-inset-top))">
     <!-- FLAGS BANNER: three flags merged side by side with blend -->
@@ -1230,8 +1230,8 @@ function attachHandlers(){}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function showApp(){
-  document.getElementById("loading").style.display="none";
-  document.getElementById("app").style.display="block";
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("app").removeAttribute("style");
   document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===S.activeTab));
   autoPopulateKO(S);
   updateSaveBar();
