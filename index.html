@@ -655,51 +655,45 @@ function getMatchLoser(matchNum) {
 }
 
 function autoPopulateKO(state) {
-  // We operate on state directly (called inside update())
   const best3rd = getBest3rdPlaced(); // [] until all 12 groups complete
 
   // ── R32 ──
-  // Assign T3 slots in order, but track which T3 teams are already placed
-  // to avoid duplicates across multiple calls
-  let t3Assigned = [];
+  // Build the full intended team map first, then apply — avoids partial state bugs
+  // Track all assigned teams globally to catch any cross-slot duplicates
+  const usedInR32 = new Set();
+
+  // First pass: fill non-T3 slots
   R32_PATHS.forEach(([mNum, src1, src2]) => {
     const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
     if(!m || m.played) return;
     if(src1 !== "T3"){
       const t = getGroupFinisher(src1);
-      if(t) m.team1 = t;
+      if(t && !usedInR32.has(t)){ m.team1=t; usedInR32.add(t); }
+      else if(!t) m.team1="";
     }
     if(src2 !== "T3"){
       const t = getGroupFinisher(src2);
-      if(t) m.team2 = t;
+      if(t && !usedInR32.has(t)){ m.team2=t; usedInR32.add(t); }
+      else if(!t) m.team2="";
     }
   });
 
-  // Now assign T3 slots — only if we have all 8
-  if(best3rd.length === 8){
-    let t3i = 0;
-    R32_PATHS.forEach(([mNum, src1, src2]) => {
-      const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
-      if(!m || m.played) return;
-      if(src1 === "T3"){ m.team1 = best3rd[t3i++]||""; }
-      if(src2 === "T3"){ m.team2 = best3rd[t3i++]||""; }
-    });
-  } else {
-    // Clear T3 slots so stale values don't persist
-    R32_PATHS.forEach(([mNum, src1, src2]) => {
-      const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
-      if(!m || m.played) return;
-      if(src1 === "T3" && !m.team1) m.team1 = "";
-      if(src2 === "T3" && !m.team2) m.team2 = "";
-    });
-  }
-
-  // Deduplicate: if any team appears more than once in R32, clear duplicates
-  const seen = new Set();
-  state.koMatches.r32.forEach(m => {
-    if(!m.played){
-      if(m.team1){ if(seen.has(m.team1)) m.team1=""; else seen.add(m.team1); }
-      if(m.team2){ if(seen.has(m.team2)) m.team2=""; else seen.add(m.team2); }
+  // Second pass: fill T3 slots — only when we have all 8
+  // Filter out any T3 teams already placed as group finishers (safety net)
+  const availableT3 = best3rd.filter(t => !usedInR32.has(t));
+  let t3i = 0;
+  R32_PATHS.forEach(([mNum, src1, src2]) => {
+    const m = state.koMatches.r32.find(m=>m.matchNum===mNum);
+    if(!m || m.played) return;
+    if(src1 === "T3"){
+      const t = availableT3[t3i++]||"";
+      if(t && !usedInR32.has(t)){ m.team1=t; usedInR32.add(t); }
+      else m.team1="";
+    }
+    if(src2 === "T3"){
+      const t = availableT3[t3i++]||"";
+      if(t && !usedInR32.has(t)){ m.team2=t; usedInR32.add(t); }
+      else m.team2="";
     }
   });
 
