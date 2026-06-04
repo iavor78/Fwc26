@@ -1273,13 +1273,40 @@ function renderKODraw(phase){
   const allFilled=autoTeams.length>0;
   let h=`<div class="section-label">${round.label} — ${n} team${n>1?"s":""} per player</div>`;
   if(allFilled){
-    h+=`<div style="background:#0a1a0a;border:1px solid #1a2a1a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#2a9d8f">
+    h+=`<div style="background:#0a1a0a;border:1px solid #1a2a1a;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#2a9d8f">
       ✓ Teams auto-filled from results. Assign each team to a player below.
     </div>`;
   } else {
-    h+=`<div style="background:#1a1a0a;border:1px solid #2a2a1a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#888">
+    h+=`<div style="background:#1a1a0a;border:1px solid #2a2a1a;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#888">
       Teams will appear here automatically once previous round results are entered.
     </div>`;
+  }
+  // R32: always show manual override panel for all 16 matches
+  if(phase==="r32"){
+    h+=`<datalist id="allTeamsList">`;
+    GROUP_KEYS.forEach(g=>GROUPS[g].forEach(t=>{ h+=`<option value="${esc(t)}">`; }));
+    h+=`</datalist>`;
+    h+=`<div class="card mb10" style="padding:10px 12px;border-color:#1a1a2a">
+      <div style="font-size:10px;color:#444;letter-spacing:1px;margin-bottom:8px">✏️ MANUAL TEAM OVERRIDE — R32</div>
+      <div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.5">Auto-fill may need correction for 3rd-place qualifiers. Edit any slot directly — changes sync to all players.</div>`;
+    S.koMatches.r32.forEach(m=>{
+      const srcPath=R32_PATHS.find(p=>p[0]===m.matchNum);
+      const src1=srcPath?srcPath[1]:"?", src2=srcPath?srcPath[2]:"?";
+      h+=`<div style="margin-bottom:8px">
+        <div style="font-size:9px;color:#2a2a2a;margin-bottom:3px;letter-spacing:.8px">M${m.matchNum} · <span style="color:#333">${src1}</span> vs <span style="color:#333">${src2}</span></div>
+        <div style="display:flex;gap:6px">
+          <input type="text" value="${esc(m.team1||"")}" placeholder="${src1==="T3"?"3rd-place qualifier":src1}"
+            list="allTeamsList"
+            style="flex:1;background:#111;border:1px solid #1e1e2a;color:#ddd;padding:5px 8px;border-radius:6px;font-size:11px"
+            onchange="update(s=>{const mx=s.koMatches.r32.find(x=>x.matchNum===${m.matchNum});if(mx)mx.team1=this.value.trim()})">
+          <input type="text" value="${esc(m.team2||"")}" placeholder="${src2==="T3"?"3rd-place qualifier":src2}"
+            list="allTeamsList"
+            style="flex:1;background:#111;border:1px solid #1e1e2a;color:#ddd;padding:5px 8px;border-radius:6px;font-size:11px"
+            onchange="update(s=>{const mx=s.koMatches.r32.find(x=>x.matchNum===${m.matchNum});if(mx)mx.team2=this.value.trim()})">
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
   }
   S.playerNames.forEach((pname,pi)=>{
     const current=S.koDraw[phase][pi]||[];
