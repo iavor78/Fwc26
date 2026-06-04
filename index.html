@@ -1181,6 +1181,9 @@ function renderKODraw(phase){
           });
           h+=`<optgroup label="Group ${grp}">`;
           byGroup[grp].forEach((t,i)=>{
+            // Hide if already assigned to another player in this phase
+            const takenByOther = [0,1,2,3].filter(op=>op!==pi).some(op=>(S.koDraw[phase][op]||[]).includes(t));
+            if(takenByOther && cv!==t) return;
             h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
           });
           h+=`</optgroup>`;
