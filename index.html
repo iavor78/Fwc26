@@ -1059,11 +1059,11 @@ function renderBracket(){
       <div class="bracket-match-num">M${num}</div>
       <div class="flex gap4 items-center mb4">
         <span class="bracket-team flex-1" style="color:${c1}${d1};font-style:${ip1?"italic":"normal"}">${lbl1}</span>
-        <span class="bracket-score">${m.played?m.goals1:""}</span>
+        <span class="bracket-score">${m.played?m.goals1:""}${m.played&&m.penWinner===m.team1?'<span style="color:#f4a261;font-size:9px">*</span>':""}</span>
       </div>
       <div class="flex gap4 items-center">
         <span class="bracket-team flex-1" style="color:${c2}${d2};font-style:${ip2?"italic":"normal"}">${lbl2}</span>
-        <span class="bracket-score">${m.played?m.goals2:""}</span>
+        <span class="bracket-score">${m.played?m.goals2:""}${m.played&&m.penWinner===m.team2?'<span style="color:#f4a261;font-size:9px">*</span>':""}</span>
       </div>
     </div>`;
   }
