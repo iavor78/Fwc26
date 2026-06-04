@@ -77,6 +77,7 @@
 <body>
 <div id="loading" style="display:none"></div>
 <div id="app">
+<div id="lockOverlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.0);pointer-events:all;cursor:not-allowed"></div>
   <div style="position:relative;overflow:hidden;border-bottom:1px solid #1a0a0a;padding-top:max(0px,env(safe-area-inset-top))">
     <!-- FLAGS BANNER: three flags merged side by side with blend -->
     <div style="display:flex;height:72px;overflow:hidden;position:relative">
@@ -113,7 +114,10 @@
   <div class="content" id="content" style="position:relative;z-index:1"></div>
   <div class="save-bar">
     <div style="max-width:100%;margin:0 auto">
-      <div class="fs10 mb6" style="color:#333;letter-spacing:1px;text-transform:uppercase">🔗 Share with other players</div>
+      <div class="flex items-center justify-between mb6">
+        <div class="fs10" style="color:#333;letter-spacing:1px;text-transform:uppercase">🔗 Share with other players</div>
+        <button id="lockBtn" onclick="toggleLock()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;cursor:pointer;font-size:12px;color:#888;padding:3px 8px;flex-shrink:0">🔓 Unlocked</button>
+      </div>
       <div class="flex gap8 items-center">
         <input id="saveUrlBox" readonly value="Loading…"
           onclick="this.select()"
@@ -390,9 +394,9 @@ function initState() {
   const koDraw={}, koMatches={};
   KO_ROUNDS.forEach(r=>{
     koDraw[r.key]=[[],[],[],[]];
-    koMatches[r.key]=r.matchNums.map(n=>({matchNum:n,team1:"",team2:"",goals1:"",goals2:"",played:false}));
+    koMatches[r.key]=r.matchNums.map(n=>({matchNum:n,team1:"",team2:"",goals1:"",goals2:"",penWinner:"",played:false}));
   });
-  return {playerNames:["Player 1","Player 2","Player 3","Player 4"],groupDraw,groupMatches,koDraw,koMatches,activeTab:"table",activeGroup:"A",activeKOPhase:"r32",activeMatchPhase:"group"};
+  return {playerNames:["Player 1","Player 2","Player 3","Player 4"],groupDraw,groupMatches,koDraw,koMatches,activeTab:"table",activeGroup:"A",activeKOPhase:"r32",activeMatchPhase:"group",locked:false};
 }
 
 let S = initState();
@@ -624,13 +628,14 @@ function getBest3rdPlaced() {
 }
 
 function getMatchWinner(matchNum) {
-  // Find match by number across all KO rounds
   for(const r of KO_ROUNDS) {
     const m = S.koMatches[r.key].find(m=>m.matchNum===matchNum);
     if(m && m.played && m.goals1!=="" && m.goals2!=="") {
       const g1=parseInt(m.goals1), g2=parseInt(m.goals2);
       if(g1>g2) return m.team1;
       if(g2>g1) return m.team2;
+      // Draw → use penalty winner
+      if(g1===g2 && m.penWinner) return m.penWinner;
     }
   }
   return "";
@@ -643,6 +648,7 @@ function getMatchLoser(matchNum) {
       const g1=parseInt(m.goals1), g2=parseInt(m.goals2);
       if(g1>g2) return m.team2;
       if(g2>g1) return m.team1;
+      if(g1===g2 && m.penWinner) return m.penWinner===m.team1?m.team2:m.team1;
     }
   }
   return "";
@@ -752,6 +758,7 @@ function computeTable(){
   });
 
   // KO rounds — use KO draw ownership only (per round)
+  // Penalty wins: GD based on FT score, but winner gets W (3pts) not D (1pt)
   KO_ROUNDS.forEach(({key})=>{
     S.koMatches[key].forEach(m=>{
       if(!m.played) return;
@@ -759,8 +766,21 @@ function computeTable(){
       if(isNaN(g1)||isNaN(g2)) return;
       const o1=m.team1?koOwner(m.team1,key):-1;
       const o2=m.team2?koOwner(m.team2,key):-1;
-      if(o1>=0){const s=stats[o1];s.played++;s.gf+=g1;s.ga+=g2;s.gd+=g1-g2;s.pts+=pts(g1,g2);if(g1>g2)s.won++;else if(g1===g2)s.drawn++;else s.lost++;}
-      if(o2>=0){const s=stats[o2];s.played++;s.gf+=g2;s.ga+=g1;s.gd+=g2-g1;s.pts+=pts(g2,g1);if(g2>g1)s.won++;else if(g2===g1)s.drawn++;else s.lost++;}
+      const isPen = g1===g2 && m.penWinner;
+      const penWin1 = isPen && m.penWinner===m.team1;
+      const penWin2 = isPen && m.penWinner===m.team2;
+      if(o1>=0){
+        const s=stats[o1];s.played++;s.gf+=g1;s.ga+=g2;s.gd+=g1-g2;
+        if(g1>g2||penWin1){s.pts+=3;s.won++;}
+        else if(g2>g1||penWin2){s.lost++;}
+        else{s.pts+=1;s.drawn++;} // shouldn't happen in KO but fallback
+      }
+      if(o2>=0){
+        const s=stats[o2];s.played++;s.gf+=g2;s.ga+=g1;s.gd+=g2-g1;
+        if(g2>g1||penWin2){s.pts+=3;s.won++;}
+        else if(g1>g2||penWin1){s.lost++;}
+        else{s.pts+=1;s.drawn++;}
+      }
     });
   });
 
@@ -776,6 +796,7 @@ function switchTab(tab){
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function render(){
+  applyLock();
   const el=document.getElementById("content");
   switch(S.activeTab){
     case "table":   el.innerHTML=renderTable();break;
@@ -1077,29 +1098,34 @@ function renderBracket(){
     });
     R32col += `</div>`;
 
-    // R16: 4 matches, each centred between 2 R32
+    // Match height is approx 54px, gap between matches = 8px
+    // UNIT = match+gap = 62px
+    // R16 centre = between match 0 and match 1 of its pair
+    // So top spacer = UNIT/2 - matchHeight/2 ... but easier: use flex centering
+
+    // R16: each centred between its 2 R32 — top spacer = UNIT - half match
+    const MH=54, GAP=8, U=MH+GAP; // ~62px per slot
     r16nums.forEach((mn,i)=>{
-      if(i>0) R16col += `<div style="height:8px"></div>`;
-      // spacer top = match height + gap/2 to centre between pair
-      R16col += `<div style="height:${UNIT-4}px"></div>`;
+      if(i>0) R16col += `<div style="height:${GAP}px"></div>`;
+      R16col += `<div style="height:${U-MH/2-GAP/2}px"></div>`;
       R16col += bm(mn);
-      R16col += `<div style="height:${UNIT-4}px"></div>`;
+      R16col += `<div style="height:${U-MH/2-GAP/2}px"></div>`;
     });
     R16col += `</div>`;
 
-    // QF: 2 matches
+    // QF: each centred between 2 R16 slots (each R16 slot = 2*U)
     qfNums.forEach((mn,i)=>{
-      if(i>0) QFcol += `<div style="height:8px"></div>`;
-      QFcol += `<div style="height:${UNIT*2-8}px"></div>`;
+      if(i>0) QFcol += `<div style="height:${GAP}px"></div>`;
+      QFcol += `<div style="height:${2*U-MH/2-GAP/2}px"></div>`;
       QFcol += bm(mn);
-      QFcol += `<div style="height:${UNIT*2-8}px"></div>`;
+      QFcol += `<div style="height:${2*U-MH/2-GAP/2}px"></div>`;
     });
     QFcol += `</div>`;
 
-    // SF: 1 match
-    SFcol += `<div style="height:${UNIT*4-8}px"></div>`;
+    // SF: centred between 2 QF slots (each QF slot = 4*U)
+    SFcol += `<div style="height:${4*U-MH/2-GAP/2}px"></div>`;
     SFcol += bm(sfNum);
-    SFcol += `<div style="height:${UNIT*4-8}px"></div>`;
+    SFcol += `<div style="height:${4*U-MH/2-GAP/2}px"></div>`;
     SFcol += `</div>`;
 
     if(!isRight){
@@ -1370,10 +1396,21 @@ function renderKOMatches(phase){
           <div style="font-size:10px;color:#333;margin-top:2px">${m.team2?"FIFA #"+rank(m.team2):""}</div>
         </div>
         <button class="done-btn ${m.played?'active':''}"
-          onclick="update(s=>{const m=s.koMatches['${phase}'][${idx}];if(m.goals1!==''&&m.goals2!=='')m.played=!m.played})">
+          onclick="update(s=>{const m=s.koMatches['${phase}'][${idx}];if(m.goals1!==''&&m.goals2!==''){if(!m.played&&parseInt(m.goals1)===parseInt(m.goals2)&&!m.penWinner){alert('Scores level — select penalty winner first');return;}m.played=!m.played}})">
           ${m.played?"✓":"Done"}
         </button>
       </div>
+      ${m.goals1!==''&&m.goals2!==''&&parseInt(m.goals1)===parseInt(m.goals2)?`
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #1a1a1a;display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:#888;flex-shrink:0">🥅 Pen winner:</span>
+        <select style="flex:1;background:#1a1a1a;border:1px solid ${m.penWinner?'#f4a261':'#2a2a2a'};color:#eee;padding:5px 8px;border-radius:6px;font-size:11px"
+          onchange="update(s=>{s.koMatches['${phase}'][${idx}].penWinner=this.value})">
+          <option value="">— select —</option>
+          ${m.team1?`<option value="${esc(m.team1)}" ${m.penWinner===m.team1?"selected":""}>${flag(m.team1)} ${esc(m.team1)}</option>`:""}
+          ${m.team2?`<option value="${esc(m.team2)}" ${m.penWinner===m.team2?"selected":""}>${flag(m.team2)} ${esc(m.team2)}</option>`:""}
+        </select>
+        ${m.penWinner?`<span style="font-size:10px;color:#f4a261">wins on pens</span>`:""}
+      </div>`:""}
     </div>`;
   });
   return h;
@@ -1503,6 +1540,20 @@ function simClear(){
   if(!confirm("Clear all simulated data? Player names will be kept.")) return;
   const names=[...S.playerNames];
   S=initState(); S.playerNames=names; save(); render();
+}
+
+function toggleLock(){
+  update(s=>{ s.locked=!s.locked; });
+  applyLock();
+}
+
+function applyLock(){
+  const locked = S&&S.locked;
+  const overlay = document.getElementById('lockOverlay');
+  const btn = document.getElementById('lockBtn');
+  if(overlay) overlay.style.display = locked ? 'block' : 'none';
+  if(btn) btn.textContent = locked ? '🔒 Locked' : '🔓 Unlocked';
+  // Still allow Players tab and lock button itself
 }
 
 function doReset(){
