@@ -973,13 +973,15 @@ function renderTable(){
 }
 
 // ── BRACKET ───────────────────────────────────────────────────────────────────
-function getOwnerIndex(team){
+function getOwnerIndex(team, koRoundKey=null){
   if(!team) return -1;
-  // Check KO draws (koDraw[phase][playerIndex] = [teamName,...])
-  for(const r of KO_ROUNDS)
+  // KO context: only look at the specific round's draw
+  if(koRoundKey){
     for(let pi=0;pi<4;pi++)
-      if((S.koDraw[r.key][pi]||[]).includes(team)) return pi;
-  // Check group draw: groupDraw[g][pi] = teamSlotIndex (player -> their team slot)
+      if((S.koDraw[koRoundKey][pi]||[]).includes(team)) return pi;
+    return -1;
+  }
+  // Group context: check groupDraw only
   for(const g of GROUP_KEYS){
     const teamSlot = GROUPS[g].indexOf(team);
     if(teamSlot<0) continue;
@@ -1015,7 +1017,8 @@ function renderBracket(){
 
   function bm(num,extraStyle=""){
     const m=byNum[num]||{matchNum:num,team1:"",team2:"",goals1:"",goals2:"",played:false};
-    const pi1=getOwnerIndex(m.team1),pi2=getOwnerIndex(m.team2);
+    const roundKey=(KO_ROUNDS.find(r=>r.matchNums.includes(num))||{}).key||null;
+    const pi1=getOwnerIndex(m.team1,roundKey),pi2=getOwnerIndex(m.team2,roundKey);
     const c1=pi1>=0?PLAYER_COLORS[pi1]:m.team1?"#aaa":"#3a3a3a";
     const c2=pi2>=0?PLAYER_COLORS[pi2]:m.team2?"#aaa":"#3a3a3a";
     const w=m.played&&m.goals1!==""&&m.goals2!==""?(parseInt(m.goals1)>parseInt(m.goals2)?m.team1:parseInt(m.goals2)>parseInt(m.goals1)?m.team2:null):null;
@@ -1279,11 +1282,20 @@ function renderKODraw(phase){
           });
           h+=`<optgroup label="Group ${grp}">`;
           byGroup[grp].forEach((t,i)=>{
-            // Hide if already assigned to another player OR already in another slot of this player
+            // Hide if taken by another player
             const takenByOther = [0,1,2,3].filter(op=>op!==pi).some(op=>(S.koDraw[phase][op]||[]).includes(t));
+            // Hide if already in another slot of this player
             const takenBySelf = current.includes(t) && current[slot]!==t;
-            if((takenByOther || takenBySelf) && cv!==t) return;
-            h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
+            // Hide if this team plays against a team already owned by this player in this round
+            const myOtherTeams = current.filter((ot,si)=>ot&&ot!==cv&&si!==slot);
+            const conflictsWithOwn = myOtherTeams.some(myT=>{
+              return S.koMatches[phase].some(m=>
+                (m.team1===t && m.team2===myT) || (m.team2===t && m.team1===myT)
+              );
+            });
+            if((takenByOther || takenBySelf || conflictsWithOwn) && cv!==t) return;
+            const conflictLabel = conflictsWithOwn && cv===t ? " ⚠" : "";
+            h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}${conflictLabel}</option>`;
           });
           h+=`</optgroup>`;
         });
@@ -1363,8 +1375,8 @@ function renderKOMatches(phase){
   const round=KO_ROUNDS.find(r=>r.key===phase);
   let h=`<div class="section-label">${round.label}</div>`;
   S.koMatches[phase].forEach((m,idx)=>{
-    const o1=getOwnerIndex(m.team1);
-    const o2=getOwnerIndex(m.team2);
+    const o1=getOwnerIndex(m.team1,phase);
+    const o2=getOwnerIndex(m.team2,phase);
     const minfo2=getMatchInfo(m.matchNum);
     const hCol=o1>=0?PLAYER_COLORS[o1]:"#888";
     const aCol=o2>=0?PLAYER_COLORS[o2]:"#888";
