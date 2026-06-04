@@ -12,14 +12,19 @@ A real-time fantasy league tracker for 4 players following the FIFA World Cup 20
 Each group (A–L) has 4 teams. Each player is assigned **one team per group**, giving every player **12 teams** across all 12 groups. The draw is done manually and entered in the **Draw** tab.
 
 ### Knockout Draw
-After the group stage, a separate draw is held for each KO round:
-- **Round of 32** — 8 teams per player
-- **Round of 16** — 4 teams per player
-- **Quarter-Finals** — 2 teams per player
-- **Semi-Finals** — 1 team per player
-- **3rd Place & Final** — 1 team per player each
+A **fresh draw is held before each KO round** — group stage ownership does not carry over. Teams are re-assigned at the start of every round:
 
-Teams in the KO draw are drawn from those that actually qualified. The same team cannot be assigned to two different players in any round.
+| Round | Teams per player |
+|-------|-----------------|
+| Round of 32 | 8 |
+| Round of 16 | 4 |
+| Quarter-Finals | 2 |
+| Semi-Finals | 1 |
+| 3rd Place & Final | 1 each |
+
+**Draw rules:**
+- The same team cannot be assigned to two different players in the same round
+- A player cannot be assigned two teams that **play each other** in the same round — if France and Morocco meet in R32, they must go to different players
 
 ---
 
@@ -37,7 +42,7 @@ Points are awarded per match, per player who owns that team:
 **Goal Difference** and **Goals For** are tracked as tiebreakers.
 
 ### Knockout Rounds
-KO matches that are decided at **Full Time**:
+KO matches decided at **Full Time**:
 
 | Result | Points |
 |--------|--------|
@@ -51,13 +56,13 @@ KO matches decided on **Penalties** (FT score is a draw):
 | Win (pens) | 3 |
 | Loss (pens) | 0 |
 
-> **Note:** When a KO match goes to penalties, the Full Time score is used for Goal Difference. The penalty shootout result determines who receives the 3 points — no draw points are awarded in KO rounds.
+> **Penalties rule:** The Full Time score is used for Goal Difference. The penalty shootout result determines who receives the 3 points. No draw points are ever awarded in KO rounds.
 
 ---
 
 ## 📊 League Table
 
-The main **Table** tab shows the overall standings across all 4 players, accumulating points from every match across the group stage and all KO rounds. The player whose teams score the most points across the entire tournament wins.
+The **Table** tab shows the overall standings across all 4 players, accumulating points from every match across the group stage and all KO rounds. The player whose teams score the most points across the entire tournament wins.
 
 Tiebreakers (in order):
 1. Points
@@ -94,7 +99,7 @@ The **Groups** tab shows live 3rd-place standings and which teams are currently 
 All data syncs instantly across all devices via Firebase. Share the URL with all 4 players — everyone sees the same live state.
 
 ### Lock 🔒
-The admin can lock the app from the footer to prevent others from editing scores while a review is in progress. Tap 🔒 to lock, 🔓 to unlock.
+The admin can lock the app from the footer to prevent others from editing scores. Tabs remain browsable when locked. Tap 🔓 to lock, 🔒 to unlock. Lock state syncs to all devices.
 
 ### Simulate
 The Players tab includes a simulate function to test or demo the app:
