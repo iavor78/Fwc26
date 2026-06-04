@@ -368,32 +368,51 @@ let remoteUpdatePending=false;
 
 async function initFirebase(){
   const {initializeApp}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-  const {getFirestore,doc,setDoc,onSnapshot}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  const {getFirestore,doc,setDoc,onSnapshot,getDoc}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
   const app=initializeApp(FB_CONFIG);
   firestoreDb=getFirestore(app);
-
-  // Listen for real-time updates from other players
   const ref=doc(firestoreDb,"games","stl-wc26");
+
+  // Do a one-time read first to load current state (this resolves the promise)
+  const snap=await getDoc(ref);
+  if(snap.exists()){
+    const data=snap.data();
+    if(data&&data.state){
+      try{
+        const parsed=JSON.parse(data.state);
+        if(parsed&&parsed.playerNames){
+          S=mergeState(parsed);
+          autoPopulateKO(S);
+          updateSaveBar();
+          render();
+          showSyncFlash("☁ Loaded from cloud");
+        }
+      }catch(e){}
+    }
+  }
+
+  // Then set up ongoing real-time listener (non-blocking from here)
   unsubscribe=onSnapshot(ref,snap=>{
     if(!snap.exists()) return;
     const data=snap.data();
     if(!data||!data.state) return;
-    // Only apply if it came from someone else (hash check)
     const hash=data.hash||"";
     if(hash===lastSaveHash) return;
     try{
       const parsed=JSON.parse(data.state);
       if(parsed&&parsed.playerNames){
-        remoteUpdatePending=true;
         S=mergeState(parsed);
-        remoteUpdatePending=false;
+        autoPopulateKO(S);
         updateSaveBar();
         render();
         showSyncFlash("↓ Updated from cloud");
       }
     }catch(e){}
+  },err=>{
+    console.warn("Firestore listener error:",err);
+    const el=document.getElementById("loadStatus");
+    if(el) el.textContent="⚠ Offline";
   });
-  return {getFirestore,doc,setDoc};
 }
 
 async function dbSave(state){
@@ -1228,27 +1247,35 @@ function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").
 function attachHandlers(){}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-async function init(){
-  // Show loading
-  document.getElementById("loading").textContent="Connecting to cloud…";
-
-  // URL seed takes priority (first-time setup)
-  const fromURL=loadFromURL();
-  if(fromURL){ S=mergeState(fromURL); }
-
-  // Connect Firebase — this also starts the real-time listener
-  try{
-    await initFirebase();
-  }catch(e){
-    console.warn("Firebase failed, running offline",e);
-    document.getElementById("loadStatus").textContent="⚠ Offline mode";
-  }
-
+function showApp(){
   document.getElementById("loading").style.display="none";
   document.getElementById("app").style.display="block";
   document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===S.activeTab));
   autoPopulateKO(S);
-  updateSaveBar();render();
+  updateSaveBar();
+  render();
+}
+
+async function init(){
+  // URL seed takes priority
+  const fromURL=loadFromURL();
+  if(fromURL){ S=mergeState(fromURL); }
+
+  // Show app immediately — don't wait for Firebase
+  showApp();
+
+  // Connect Firebase in background — non-blocking
+  try{
+    // Add a race: if Firebase doesn't connect in 6s, just continue offline
+    await Promise.race([
+      initFirebase(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),6000))
+    ]);
+  }catch(e){
+    console.warn("Firebase unavailable:",e.message);
+    const el=document.getElementById("loadStatus");
+    if(el) el.textContent="⚠ Offline";
+  }
 }
 init();
 </script>
