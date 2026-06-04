@@ -1350,11 +1350,12 @@ function renderKODraw(phase){
                 (m.team1===t && m.team2===myT) || (m.team2===t && m.team1===myT)
               );
             });
-            // Final/3rd: each player gets exactly 1 team total across both rounds
-            // If already assigned in the paired round, cannot assign in this one
+            // Final/3rd: if player already has a team in the paired round, block this slot
+            // BUT still show their current selection (cv===t) so it doesn't blank out
             const pairedPhase = phase==="final"?"third":phase==="third"?"final":null;
-            const takenInPaired = pairedPhase && (S.koDraw[pairedPhase][pi]||[]).length>0 && cv!==t;
-            if((takenByOther || takenBySelf || conflictsWithOwn || takenInPaired) && cv!==t) return;
+            const pairedTeams = pairedPhase ? (S.koDraw[pairedPhase][pi]||[]).filter(Boolean) : [];
+            const blockedByPaired = pairedPhase && pairedTeams.length>0 && cv!==t;
+            if(takenByOther || takenBySelf || conflictsWithOwn || blockedByPaired) return;
             h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
           });
           h+=`</optgroup>`;
