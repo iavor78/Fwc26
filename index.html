@@ -1055,8 +1055,10 @@ function renderBracket(){
     const lbl1=teamLabel(m.team1,num,0);
     const lbl2=teamLabel(m.team2,num,1);
     const ip1=!m.team1,ip2=!m.team2;
+    const minfo=getMatchInfo(num);
+    const mdate=minfo?`${minfo.dateStr} · ${minfo.city}`:"";
     return `<div class="bracket-match" style="${extraStyle}">
-      <div class="bracket-match-num">M${num}</div>
+      <div class="bracket-match-num">M${num}${mdate?` <span style="color:#2a2a2a;font-weight:400">· ${esc(mdate)}</span>`:""}</div>
       <div class="flex gap4 items-center mb4">
         <span class="bracket-team flex-1" style="color:${c1}${d1};font-style:${ip1?"italic":"normal"}">${lbl1}</span>
         <span class="bracket-score">${m.played?m.goals1:""}${m.played&&m.penWinner===m.team1?'<span style="color:#f4a261;font-size:9px">*</span>':""}</span>
@@ -1337,7 +1339,7 @@ function renderKODraw(phase){
           });
           h+=`<optgroup label="Group ${grp}">`;
           byGroup[grp].forEach((t,i)=>{
-            // Hide if taken by another player
+            // Hide if taken by another player in this round
             const takenByOther = [0,1,2,3].filter(op=>op!==pi).some(op=>(S.koDraw[phase][op]||[]).includes(t));
             // Hide if already in another slot of this player
             const takenBySelf = current.includes(t) && current[slot]!==t;
@@ -1348,9 +1350,12 @@ function renderKODraw(phase){
                 (m.team1===t && m.team2===myT) || (m.team2===t && m.team1===myT)
               );
             });
-            if((takenByOther || takenBySelf || conflictsWithOwn) && cv!==t) return;
-            const conflictLabel = conflictsWithOwn && cv===t ? " ⚠" : "";
-            h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}${conflictLabel}</option>`;
+            // Final/3rd: each player gets exactly 1 team total across both rounds
+            // If already assigned in the paired round, cannot assign in this one
+            const pairedPhase = phase==="final"?"third":phase==="third"?"final":null;
+            const takenInPaired = pairedPhase && (S.koDraw[pairedPhase][pi]||[]).length>0 && cv!==t;
+            if((takenByOther || takenBySelf || conflictsWithOwn || takenInPaired) && cv!==t) return;
+            h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
           });
           h+=`</optgroup>`;
         });
