@@ -52,11 +52,11 @@
   td.left{text-align:left}
   .bracket-wrap{overflow-x:auto;padding-bottom:8px}
   .bracket{display:flex;gap:8px;min-width:max-content}
-  .bracket-col{display:flex;flex-direction:column;gap:4px;min-width:145px}
+  .bracket-col{display:flex;flex-direction:column;min-width:148px}
   .bracket-col-label{font-size:10px;color:#444;letter-spacing:1px;text-align:center;margin-bottom:4px;font-weight:700;text-transform:uppercase}
-  .bracket-match{background:#111;border-radius:8px;padding:8px 10px;border:1px solid #1a1a1a}
-  .bracket-match-num{font-size:9px;color:#333;margin-bottom:5px;letter-spacing:.8px}
-  .bracket-team{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+  .bracket-match{background:#111;border-radius:6px;padding:7px 9px;border:1px solid #1a1a1a}
+  .bracket-match-num{font-size:9px;color:#2a2a2a;margin-bottom:4px;letter-spacing:.8px}
+  .bracket-team{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
   .bracket-score{font-size:12px;font-weight:700;color:#555;min-width:14px;text-align:center;flex-shrink:0}
   .flex{display:flex}.gap4{gap:4px}.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}
   .items-center{align-items:center}.justify-between{justify-content:space-between}.flex-1{flex:1}
@@ -974,103 +974,175 @@ function getOwnerColor(team){
   return pi>=0 ? PLAYER_COLORS[pi] : "#555";
 }
 function renderBracket(){
-  // Official WC2026 bracket — left half feeds into centre final
-  // matchNum -> match object lookup
   const byNum={};
   KO_ROUNDS.forEach(r=>S.koMatches[r.key].forEach(m=>byNum[m.matchNum]=m));
 
-  // Feeder map: matchNum -> [feeder1, feeder2]
-  const FEEDERS = {};
+  const FEEDERS={};
   R16_PATHS.forEach(([m,a,b])=>FEEDERS[m]=[a,b]);
   QF_PATHS.forEach(([m,a,b])=>FEEDERS[m]=[a,b]);
   SF_PATHS.forEach(([m,a,b])=>FEEDERS[m]=[a,b]);
-  FEEDERS[103]=[101,102]; // 3rd place: losers of SF
-  FEEDERS[104]=[101,102]; // Final: winners of SF
+  FEEDERS[103]=[101,102];
+  FEEDERS[104]=[101,102];
 
-  function teamLabel(team, matchNum, slot){
-    // slot: 0=home/left, 1=away/right
+  function teamLabel(team,num,slot){
     if(team) return flag(team)+" "+esc(team);
-    const feeders=FEEDERS[matchNum];
+    const feeders=FEEDERS[num];
     if(!feeders) return "TBD";
-    const feederNum=feeders[slot];
-    if(matchNum===103) return `Loser M${feederNum}`;
-    return `W M${feederNum}`;
+    const f=feeders[slot];
+    return num===103?`Loser M${f}`:`W M${f}`;
   }
 
-  function bm(num){
+  function bm(num,extraStyle=""){
     const m=byNum[num]||{matchNum:num,team1:"",team2:"",goals1:"",goals2:"",played:false};
-    const pi1=getOwnerIndex(m.team1), pi2=getOwnerIndex(m.team2);
-    const c1=pi1>=0?PLAYER_COLORS[pi1]:m.team1?"#aaa":"#444";
-    const c2=pi2>=0?PLAYER_COLORS[pi2]:m.team2?"#aaa":"#444";
+    const pi1=getOwnerIndex(m.team1),pi2=getOwnerIndex(m.team2);
+    const c1=pi1>=0?PLAYER_COLORS[pi1]:m.team1?"#aaa":"#3a3a3a";
+    const c2=pi2>=0?PLAYER_COLORS[pi2]:m.team2?"#aaa":"#3a3a3a";
     const w=m.played&&m.goals1!==""&&m.goals2!==""?(parseInt(m.goals1)>parseInt(m.goals2)?m.team1:parseInt(m.goals2)>parseInt(m.goals1)?m.team2:null):null;
-    const d1=w&&w!==m.team1?";opacity:.32":"";
-    const d2=w&&w!==m.team2?";opacity:.32":"";
+    const d1=w&&w!==m.team1?";opacity:.28":"";
+    const d2=w&&w!==m.team2?";opacity:.28":"";
     const lbl1=teamLabel(m.team1,num,0);
     const lbl2=teamLabel(m.team2,num,1);
-    const isPending1=!m.team1, isPending2=!m.team2;
-    return `<div class="bracket-match">
+    const ip1=!m.team1,ip2=!m.team2;
+    return `<div class="bracket-match" style="${extraStyle}">
       <div class="bracket-match-num">M${num}</div>
       <div class="flex gap4 items-center mb4">
-        <span class="bracket-team flex-1" style="color:${c1}${d1};font-style:${isPending1?"italic":"normal"}">${lbl1}</span>
+        <span class="bracket-team flex-1" style="color:${c1}${d1};font-style:${ip1?"italic":"normal"}">${lbl1}</span>
         <span class="bracket-score">${m.played?m.goals1:""}</span>
       </div>
       <div class="flex gap4 items-center">
-        <span class="bracket-team flex-1" style="color:${c2}${d2};font-style:${isPending2?"italic":"normal"}">${lbl2}</span>
+        <span class="bracket-team flex-1" style="color:${c2}${d2};font-style:${ip2?"italic":"normal"}">${lbl2}</span>
         <span class="bracket-score">${m.played?m.goals2:""}</span>
       </div>
     </div>`;
   }
 
-  // Left half:  R32×8 → R16×4 → QF×2 → SF×1
-  // Right half: R32×8 → R16×4 → QF×2 → SF×1
-  // Centre: Final + 3rd place
-  const LEFT_R32  = [73,75,77,79,80,78,76,74];
-  const RIGHT_R32 = [81,83,85,87,88,86,84,82];
-  const LEFT_R16  = [89,90,91,92];
-  const RIGHT_R16 = [93,94,95,96];
-  const LEFT_QF   = [97,98];
-  const RIGHT_QF  = [99,100];
-  const LEFT_SF   = [101];
-  const RIGHT_SF  = [102];
+  // Match card height ~56px, gap between pairs = connector
+  // For a proper tree: each R16 is vertically centred between its 2 R32 matches
+  // Unit height U = match height + gap. R32: 8 matches. R16: 4. QF: 2. SF: 1.
+  // We use flex with justify-content:space-around on each column.
 
-  function col(label, nums, align){
-    const txtAlign = align==='right'?'text-align:right':'';
-    let h=`<div class="bracket-col"><div class="bracket-col-label" style="${txtAlign}">${label}</div>`;
-    nums.forEach(n=>h+=bm(n));
-    h+=`</div>`;
-    return h;
+  // R32 pairs that feed each R16:
+  // M89 ← M73+M74, M90 ← M75+M76, M91 ← M77+M78, M92 ← M79+M80
+  // M93 ← M81+M82, M94 ← M83+M84, M95 ← M85+M86, M96 ← M87+M88
+  // QF: M97←M89+M90, M98←M91+M92, M99←M93+M94, M100←M95+M96
+  // SF: M101←M97+M98, M102←M99+M100
+
+  // Build a column using a "tree" structure:
+  // Each match is paired with a connector element that visually groups 2 children → 1 parent
+
+  function connector(topHalf){
+    // Draw an ⌐ or L shaped connector
+    return `<div class="bk-connector" style="width:10px;flex-shrink:0">
+      <div class="bk-line-top" style="${topHalf?"border-right:1px solid #252525;border-bottom:1px solid #252525":"border-right:1px solid #252525;border-top:1px solid #252525"}"></div>
+      <div style="flex:1;${topHalf?"border-right:1px solid #252525":"border-right:1px solid #252525"}"></div>
+    </div>`;
   }
 
-  let h=`<div class="section-label mb8">KO Bracket · scroll sideways →</div>`;
-  h+=`<div class="bracket-wrap"><div style="display:flex;gap:6px;min-width:max-content;align-items:flex-start">`;
+  // Build a half-bracket column set
+  // pairs: array of pairs of match nums at R32 level
+  // Each pair feeds one R16, pairs-of-R16 feed QF, pairs-of-QF feed SF
+  function halfBracket(r32pairs, r16nums, qfNums, sfNum, side){
+    // side: "left" = connects right, "right" = connects left (mirrored)
+    const isRight = side==="right";
+    const matchW = 148;
+    const connW = 10;
+    const horizW = 8;
+    const UNIT = 64; // px per R32 slot (match ~54px + 10px gap)
 
-  // Left half (reads left→right toward centre)
-  h+=col("R32", LEFT_R32,  'left');
-  h+=col("R16", LEFT_R16,  'left');
-  h+=col("QF",  LEFT_QF,   'left');
-  h+=col("SF",  LEFT_SF,   'left');
+    // We render as an SVG overlay approach but simpler: CSS flexbox tree
+    // Column structure: [R32 col] [conn] [R16 col] [conn] [QF col] [conn] [SF col]
 
-  // Centre column: SF winner placeholder + Final + 3rd place
-  h+=`<div class="bracket-col" style="min-width:155px">
-    <div class="bracket-col-label" style="text-align:center">🏆 Final</div>
-    ${bm(104)}
-    <div style="margin-top:8px"></div>
-    <div class="bracket-col-label" style="text-align:center;font-size:9px;color:#444">3rd Place</div>
-    ${bm(103)}
-  </div>`;
+    let R32col = `<div class="bracket-col" style="gap:8px">
+      <div class="bracket-col-label">${isRight?"R32":""}</div>`;
+    let R16col = `<div class="bracket-col" style="gap:8px">
+      <div class="bracket-col-label">${isRight?"R16":""}</div>`;
+    let QFcol = `<div class="bracket-col" style="gap:8px">
+      <div class="bracket-col-label">${isRight?"QF":""}</div>`;
+    let SFcol = `<div class="bracket-col">
+      <div class="bracket-col-label">${isRight?"SF":""}</div>`;
 
-  // Right half (reads right→left toward centre, so reversed order)
-  h+=col("SF",  RIGHT_SF,  'right');
-  h+=col("QF",  RIGHT_QF,  'right');
-  h+=col("R16", RIGHT_R16, 'right');
-  h+=col("R32", RIGHT_R32, 'right');
+    if(!isRight){
+      R32col = `<div class="bracket-col" style="gap:8px"><div class="bracket-col-label">R32</div>`;
+      R16col = `<div class="bracket-col" style="gap:8px"><div class="bracket-col-label">R16</div>`;
+      QFcol  = `<div class="bracket-col" style="gap:8px"><div class="bracket-col-label">QF</div>`;
+      SFcol  = `<div class="bracket-col"><div class="bracket-col-label">SF</div>`;
+    }
 
-  h+=`</div></div>`;
+    // R32: 8 matches, grouped in pairs
+    r32pairs.forEach(([mA,mB],i)=>{
+      if(i>0) R32col += `<div style="height:8px"></div>`;
+      R32col += bm(mA);
+      R32col += `<div style="height:8px"></div>`;
+      R32col += bm(mB);
+    });
+    R32col += `</div>`;
+
+    // R16: 4 matches, each centred between 2 R32
+    r16nums.forEach((mn,i)=>{
+      if(i>0) R16col += `<div style="height:8px"></div>`;
+      // spacer top = match height + gap/2 to centre between pair
+      R16col += `<div style="height:${UNIT-4}px"></div>`;
+      R16col += bm(mn);
+      R16col += `<div style="height:${UNIT-4}px"></div>`;
+    });
+    R16col += `</div>`;
+
+    // QF: 2 matches
+    qfNums.forEach((mn,i)=>{
+      if(i>0) QFcol += `<div style="height:8px"></div>`;
+      QFcol += `<div style="height:${UNIT*2-8}px"></div>`;
+      QFcol += bm(mn);
+      QFcol += `<div style="height:${UNIT*2-8}px"></div>`;
+    });
+    QFcol += `</div>`;
+
+    // SF: 1 match
+    SFcol += `<div style="height:${UNIT*4-8}px"></div>`;
+    SFcol += bm(sfNum);
+    SFcol += `<div style="height:${UNIT*4-8}px"></div>`;
+    SFcol += `</div>`;
+
+    if(!isRight){
+      return R32col + R16col + QFcol + SFcol;
+    } else {
+      return SFcol + QFcol + R16col + R32col;
+    }
+  }
+
+  const LEFT_R32_PAIRS  = [[73,74],[75,76],[77,78],[79,80]];
+  const RIGHT_R32_PAIRS = [[81,82],[83,84],[85,86],[87,88]];
+
+  let h = `<div class="section-label mb8">KO Bracket <span style="font-size:10px;color:#444">← scroll →</span></div>`;
+  h += `<div class="bracket-wrap">`;
+  h += `<div style="display:inline-flex;align-items:stretch;gap:0;position:relative">`;
+
+  // Left half
+  h += `<div style="display:flex;gap:0">`;
+  h += halfBracket(LEFT_R32_PAIRS,[89,90,91,92],[97,98],101,"left");
+  h += `</div>`;
+
+  // Centre: Final + 3rd place, vertically centred
+  const UNIT=64;
+  const totalH = 8*UNIT + 40; // approx total height
+  h += `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:160px;padding:0 8px">`;
+  h += `<div class="bracket-col-label" style="text-align:center">🏆 Final</div>`;
+  h += bm(104,"min-width:144px");
+  h += `<div style="height:16px"></div>`;
+  h += `<div class="bracket-col-label" style="text-align:center;font-size:9px;color:#555">3rd Place</div>`;
+  h += bm(103,"min-width:144px");
+  h += `</div>`;
+
+  // Right half (mirrored)
+  h += `<div style="display:flex;gap:0">`;
+  h += halfBracket(RIGHT_R32_PAIRS,[93,94,95,96],[99,100],102,"right");
+  h += `</div>`;
+
+  h += `</div></div>`;
 
   // Legend
-  h+=`<div class="flex flex-wrap gap12 mt16">`;
+  h += `<div class="flex flex-wrap gap12 mt16">`;
   S.playerNames.forEach((n,i)=>h+=`<div class="flex items-center gap6 fs11"><span class="player-dot" style="background:${PLAYER_COLORS[i]}"></span><span style="color:${PLAYER_COLORS[i]}">${esc(n)}</span></div>`);
-  h+=`</div>`;
+  h += `</div>`;
   return h;
 }
 
@@ -1181,9 +1253,10 @@ function renderKODraw(phase){
           });
           h+=`<optgroup label="Group ${grp}">`;
           byGroup[grp].forEach((t,i)=>{
-            // Hide if already assigned to another player in this phase
+            // Hide if already assigned to another player OR already in another slot of this player
             const takenByOther = [0,1,2,3].filter(op=>op!==pi).some(op=>(S.koDraw[phase][op]||[]).includes(t));
-            if(takenByOther && cv!==t) return;
+            const takenBySelf = current.includes(t) && current[slot]!==t;
+            if((takenByOther || takenBySelf) && cv!==t) return;
             h+=`<option value="${esc(t)}" ${cv===t?"selected":""}>${esc(t)} · #${rank(t)}</option>`;
           });
           h+=`</optgroup>`;
