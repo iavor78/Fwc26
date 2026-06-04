@@ -550,7 +550,7 @@ const R32_PATHS = [
   [82,  "1D", "T3"],
   [83,  "1H", "2J"],
   [84,  "2K", "2L"],
-  [85,  "2B", "T3"],  // note: source TBC for some T3 slots
+  [85,  "1B", "T3"],
   [86,  "2D", "2G"],
   [87,  "1J", "2H"],
   [88,  "1K", "T3"],
@@ -814,6 +814,7 @@ function renderGroups(){
       <th style="padding:5px 6px;font-weight:400">L</th>
       <th style="padding:5px 6px;font-weight:400">GD</th>
       <th style="padding:5px 6px;font-weight:400">GF</th>
+      <th style="padding:5px 6px;font-weight:400">GA</th>
       <th style="padding:5px 8px;font-weight:400">PTS</th>
     </tr></thead><tbody>`;
 
@@ -870,6 +871,7 @@ function renderGroups(){
         <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${rL}</td>
         <td style="text-align:center;padding:7px 6px;font-size:11px;color:${row.gd>0?"#2a9d8f":row.gd<0?"#e63946":"#777"}">${row.gd>0?"+":""}${row.gd}</td>
         <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.gf}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.ga}</td>
         <td style="text-align:center;padding:7px 8px;font-size:13px;font-weight:700;color:${col}">${row.pts}</td>
       </tr>`;
     });
@@ -889,6 +891,7 @@ function renderGroups(){
       <th style="padding:5px 6px;font-weight:400">P</th>
       <th style="padding:5px 6px;font-weight:400">GD</th>
       <th style="padding:5px 6px;font-weight:400">GF</th>
+      <th style="padding:5px 6px;font-weight:400">GA</th>
       <th style="padding:5px 8px;font-weight:400">PTS</th>
     </tr></thead><tbody>`;
     allThirds.forEach((row, idx)=>{
@@ -908,6 +911,7 @@ function renderGroups(){
         <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.played}</td>
         <td style="text-align:center;padding:7px 6px;font-size:11px;color:${row.gd>0?"#2a9d8f":row.gd<0?"#e63946":"#777"}">${row.gd>0?"+":""}${row.gd}</td>
         <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.gf}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.ga}</td>
         <td style="text-align:center;padding:7px 8px;font-size:13px;font-weight:700;color:${col}">${row.pts}</td>
       </tr>`;
     });
