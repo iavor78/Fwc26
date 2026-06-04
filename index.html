@@ -99,6 +99,7 @@
   </div>
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="table"   onclick="switchTab('table')"  ><div class="tab-icon">🏆</div>Table</button>
+    <button class="tab-btn"        data-tab="groups"  onclick="switchTab('groups')" ><div class="tab-icon">📊</div>Groups</button>
     <button class="tab-btn"        data-tab="bracket" onclick="switchTab('bracket')"><div class="tab-icon">🔗</div>Bracket</button>
     <button class="tab-btn"        data-tab="draw"    onclick="switchTab('draw')"   ><div class="tab-icon">🎲</div>Draw</button>
     <button class="tab-btn"        data-tab="matches" onclick="switchTab('matches')"><div class="tab-icon">⚽</div>Matches</button>
@@ -712,13 +713,35 @@ function autoPopulateKO(state) {
 }
 function computeTable(){
   const stats=S.playerNames.map(name=>({name,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0}));
+
+  // Group-draw-only lookup: groupDraw[g][pi] = teamSlot
+  function groupOwner(teamName){
+    for(const g of GROUP_KEYS){
+      const teamSlot=GROUPS[g].indexOf(teamName);
+      if(teamSlot<0) continue;
+      for(let pi=0;pi<4;pi++){
+        if(S.groupDraw[g][pi]===teamSlot) return pi;
+      }
+    }
+    return -1;
+  }
+
+  // KO-draw-only lookup: koDraw[phase][pi] = [teamName,...]
+  function koOwner(teamName, key){
+    for(let pi=0;pi<4;pi++){
+      if((S.koDraw[key][pi]||[]).includes(teamName)) return pi;
+    }
+    return -1;
+  }
+
+  // Group stage — use group draw ownership only
   GROUP_KEYS.forEach(g=>{
     S.groupMatches[g].forEach(m=>{
       if(!m.played) return;
       const hg=parseInt(m.homeGoals),ag=parseInt(m.awayGoals);
       if(isNaN(hg)||isNaN(ag)) return;
       const hTeam=GROUPS[g][m.home], aTeam=GROUPS[g][m.away];
-      const ho=getOwnerIndex(hTeam), ao=getOwnerIndex(aTeam);
+      const ho=groupOwner(hTeam), ao=groupOwner(aTeam);
       [[ho,hg,ag],[ao,ag,hg]].forEach(([pi,gf,ga])=>{
         if(pi===null||pi===undefined||pi<0) return;
         const s=stats[pi];
@@ -727,19 +750,20 @@ function computeTable(){
       });
     });
   });
+
+  // KO rounds — use KO draw ownership only (per round)
   KO_ROUNDS.forEach(({key})=>{
     S.koMatches[key].forEach(m=>{
       if(!m.played) return;
       const g1=parseInt(m.goals1),g2=parseInt(m.goals2);
       if(isNaN(g1)||isNaN(g2)) return;
-      [0,1,2,3].forEach(pi=>{
-        const h1=m.team1&&getOwnerIndex(m.team1)===pi;
-        const h2=m.team2&&getOwnerIndex(m.team2)===pi;
-        if(h1){const s=stats[pi];s.played++;s.gf+=g1;s.ga+=g2;s.gd+=g1-g2;s.pts+=pts(g1,g2);if(g1>g2)s.won++;else if(g1===g2)s.drawn++;else s.lost++;}
-        if(h2){const s=stats[pi];s.played++;s.gf+=g2;s.ga+=g1;s.gd+=g2-g1;s.pts+=pts(g2,g1);if(g2>g1)s.won++;else if(g2===g1)s.drawn++;else s.lost++;}
-      });
+      const o1=m.team1?koOwner(m.team1,key):-1;
+      const o2=m.team2?koOwner(m.team2,key):-1;
+      if(o1>=0){const s=stats[o1];s.played++;s.gf+=g1;s.ga+=g2;s.gd+=g1-g2;s.pts+=pts(g1,g2);if(g1>g2)s.won++;else if(g1===g2)s.drawn++;else s.lost++;}
+      if(o2>=0){const s=stats[o2];s.played++;s.gf+=g2;s.ga+=g1;s.gd+=g2-g1;s.pts+=pts(g2,g1);if(g2>g1)s.won++;else if(g2===g1)s.drawn++;else s.lost++;}
     });
   });
+
   return stats.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
 }
 
@@ -755,12 +779,146 @@ function render(){
   const el=document.getElementById("content");
   switch(S.activeTab){
     case "table":   el.innerHTML=renderTable();break;
+    case "groups":  el.innerHTML=renderGroups();break;
     case "bracket": el.innerHTML=renderBracket();break;
     case "draw":    el.innerHTML=renderDraw();break;
     case "matches": el.innerHTML=renderMatches();break;
     case "players": el.innerHTML=renderPlayers();break;
   }
   attachHandlers();
+}
+
+// ── GROUPS TABLE ──────────────────────────────────────────────────────────────
+function renderGroups(){
+  // Collect all 3rd-placed teams with their stats (regardless of whether all groups done)
+  const allThirds = GROUP_KEYS.map(g => {
+    const st = getGroupStandings(g);
+    return st[2] ? {...st[2], group:g} : null;
+  }).filter(Boolean).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.team.localeCompare(b.team));
+
+  const best8teams = allThirds.slice(0,8).map(t=>t.team);
+
+  let h = `<div style="font-size:10px;color:#444;text-align:center;letter-spacing:1px;margin-bottom:14px">GROUP STANDINGS</div>`;
+
+  GROUP_KEYS.forEach(g=>{
+    const st = getGroupStandings(g);
+    const allPlayed = S.groupMatches[g].every(m=>m.played);
+    h += `<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">`;
+    h += `<div style="background:#111;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:2px;color:#555;border-bottom:1px solid #1a1a1a">GROUP ${g}</div>`;
+    h += `<table style="width:100%;border-collapse:collapse">`;
+    h += `<thead><tr style="font-size:9px;color:#333;letter-spacing:1px">
+      <th style="text-align:left;padding:5px 12px;font-weight:400">TEAM</th>
+      <th style="padding:5px 6px;font-weight:400">P</th>
+      <th style="padding:5px 6px;font-weight:400">W</th>
+      <th style="padding:5px 6px;font-weight:400">D</th>
+      <th style="padding:5px 6px;font-weight:400">L</th>
+      <th style="padding:5px 6px;font-weight:400">GD</th>
+      <th style="padding:5px 6px;font-weight:400">GF</th>
+      <th style="padding:5px 8px;font-weight:400">PTS</th>
+    </tr></thead><tbody>`;
+
+    st.forEach((row, idx) => {
+      const pi = getOwnerIndex(row.team);
+      const col = pi>=0 ? PLAYER_COLORS[pi] : "#555";
+      const won = row.gf>row.ga ? "W" : row.gf<row.ga ? "L" : row.gd===0&&row.played===0?"":row.pts>0?"W":"L";
+      // Qualification indicator
+      let qual = "";
+      let rowStyle = "";
+      if(idx===0||idx===1){
+        qual = `<span style="font-size:8px;color:#2a9d8f;margin-left:4px">✓R32</span>`;
+        rowStyle = "background:rgba(42,157,143,0.04)";
+      } else if(idx===2){
+        const isIn8 = best8teams.includes(row.team);
+        if(allThirds.length>=8){
+          qual = isIn8
+            ? `<span style="font-size:8px;color:#f4a261;margin-left:4px">✓3rd</span>`
+            : `<span style="font-size:8px;color:#555;margin-left:4px">3rd</span>`;
+          if(isIn8) rowStyle = "background:rgba(244,162,97,0.04)";
+        } else {
+          qual = `<span style="font-size:8px;color:#444;margin-left:4px">3rd?</span>`;
+        }
+      } else {
+        qual = `<span style="font-size:8px;color:#2a0a0a;margin-left:4px">✗</span>`;
+      }
+      const w = row.pts===3*(row.played)||row.played===0?0:0;
+      const wins = Math.round((row.pts - (row.played - row.pts/3>0?(row.played*3-row.pts)/3:0))/3);
+      // compute W D L properly
+      let rW=0,rD=0,rL=0;
+      S.groupMatches[g].forEach(m=>{
+        if(!m.played) return;
+        const hg=parseInt(m.homeGoals),ag=parseInt(m.awayGoals);
+        if(isNaN(hg)||isNaN(ag)) return;
+        if(m.home===GROUPS[g].indexOf(row.team)){
+          if(hg>ag)rW++;else if(hg===ag)rD++;else rL++;
+        }
+        if(m.away===GROUPS[g].indexOf(row.team)){
+          if(ag>hg)rW++;else if(hg===ag)rD++;else rL++;
+        }
+      });
+      h += `<tr style="border-top:1px solid #111;${rowStyle}">
+        <td style="padding:7px 12px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;color:#333;width:12px;text-align:center">${idx+1}</span>
+            ${flag(row.team)}
+            <span style="font-size:12px;font-weight:600;color:${col}">${esc(row.team)}</span>
+            ${qual}
+          </div>
+        </td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.played}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${rW}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${rD}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${rL}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:${row.gd>0?"#2a9d8f":row.gd<0?"#e63946":"#777"}">${row.gd>0?"+":""}${row.gd}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.gf}</td>
+        <td style="text-align:center;padding:7px 8px;font-size:13px;font-weight:700;color:${col}">${row.pts}</td>
+      </tr>`;
+    });
+    h += `</tbody></table></div>`;
+  });
+
+  // 3rd-place summary section
+  h += `<div class="card mt10" style="padding:0;overflow:hidden">`;
+  h += `<div style="background:#111;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:2px;color:#555;border-bottom:1px solid #1a1a1a">BEST 3RD-PLACED — TOP 8 ADVANCE</div>`;
+  if(allThirds.length===0){
+    h += `<div style="padding:16px 12px;font-size:11px;color:#444;text-align:center">No group stage results yet</div>`;
+  } else {
+    h += `<table style="width:100%;border-collapse:collapse">`;
+    h += `<thead><tr style="font-size:9px;color:#333;letter-spacing:1px">
+      <th style="text-align:left;padding:5px 12px;font-weight:400">TEAM</th>
+      <th style="padding:5px 6px;font-weight:400">GRP</th>
+      <th style="padding:5px 6px;font-weight:400">P</th>
+      <th style="padding:5px 6px;font-weight:400">GD</th>
+      <th style="padding:5px 6px;font-weight:400">GF</th>
+      <th style="padding:5px 8px;font-weight:400">PTS</th>
+    </tr></thead><tbody>`;
+    allThirds.forEach((row, idx)=>{
+      const pi = getOwnerIndex(row.team);
+      const col = pi>=0 ? PLAYER_COLORS[pi] : "#555";
+      const advancing = idx < 8;
+      h += `<tr style="border-top:1px solid #111;${advancing?"background:rgba(244,162,97,0.05)":""}">
+        <td style="padding:7px 12px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:10px;color:#333;width:14px">${idx+1}</span>
+            ${flag(row.team)}
+            <span style="font-size:12px;font-weight:600;color:${col}">${esc(row.team)}</span>
+            ${advancing?`<span style="font-size:8px;color:#f4a261;margin-left:2px">✓</span>`:`<span style="font-size:8px;color:#2a0a0a;margin-left:2px">✗</span>`}
+          </div>
+        </td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#555">${row.group}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.played}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:${row.gd>0?"#2a9d8f":row.gd<0?"#e63946":"#777"}">${row.gd>0?"+":""}${row.gd}</td>
+        <td style="text-align:center;padding:7px 6px;font-size:11px;color:#777">${row.gf}</td>
+        <td style="text-align:center;padding:7px 8px;font-size:13px;font-weight:700;color:${col}">${row.pts}</td>
+      </tr>`;
+    });
+    h += `</tbody></table>`;
+    if(allThirds.length < 12){
+      h += `<div style="padding:8px 12px;font-size:10px;color:#444;border-top:1px solid #111">${12-allThirds.length} group${12-allThirds.length!==1?"s":""} still in progress — ranking may change</div>`;
+    }
+  }
+  h += `</div>`;
+  h += `<div style="margin-top:20px;font-size:10px;color:#2a2a2a;text-align:center;letter-spacing:1px">✓R32 = qualified · ✓3rd = best third · W=3 · D=1 · L=0</div>`;
+  return h;
 }
 
 // ── TABLE ─────────────────────────────────────────────────────────────────────
